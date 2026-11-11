@@ -1,0 +1,14 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "bootstrap-environment",
+  "description": "Bootstrap any project for AI agents and run it with an enforced session family.",
+  "owner": { "name": "AnfalHaider", "url": "https://github.com/AnfalHaider" },
+  "plugins": [
+    {
+      "name": "bootstrap-environment",
+      "description": "Stack-aware bootstrap, plugin discovery, memory, and a Chief of Staff with enforced role sessions.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

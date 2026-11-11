@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bootstrap and Session Family</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600&display=swap">
+<style>
+/* One reading column, numbered flow strips, role cards in a two-column grid: a working document. */
+:root{
+  --paper:#F7F6F2; --card:#FFFFFF; --ink:#1F1D1A; --ink2:#55514A; --ink3:#7A756C; --line:#DDD9D0; --line2:#C7C2B6;
+  --accent:#9A3B1E; --accent-soft:#F3E2DA; --note:#E9EEF6; --note-ink:#2D4B7A; --warn:#FBEFD5; --warn-ink:#6B4A00;
+  --display:"Fraunces","Georgia",serif; --text:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; --mono:"IBM Plex Mono",Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#121210;--card:#1B1B18;--ink:#ECE9E2;--ink2:#B8B3A8;--ink3:#8E897E;--line:#2C2B27;--line2:#3C3A34;--accent:#E07A52;--accent-soft:#3A2419;--note:#1C2434;--note-ink:#A9C0E8;--warn:#2E2614;--warn-ink:#E8C778;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#121210;--card:#1B1B18;--ink:#ECE9E2;--ink2:#B8B3A8;--ink3:#8E897E;--line:#2C2B27;--line2:#3C3A34;--accent:#E07A52;--accent-soft:#3A2419;--note:#1C2434;--note-ink:#A9C0E8;--warn:#2E2614;--warn-ink:#E8C778;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 var(--text)}
+.wrap{max-width:980px;margin:0 auto;padding-block:32px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:44px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em;font-weight:600}
+h1{font-size:clamp(30px,5vw,44px);line-height:1.1}h2{font-size:24px}h3{font-size:17px;font-family:var(--text);font-weight:600}
+p{margin:0;max-width:70ch}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{font-size:17px;color:var(--ink2);max-width:64ch}
+section{display:grid;gap:14px;min-width:0}
+ul,ol{margin:0;padding-left:20px;display:grid;gap:6px;max-width:74ch}
+li{min-width:0}
+code{font-family:var(--mono);font-size:12.5px;background:var(--accent-soft);color:var(--ink);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.flow{display:grid;border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--card)}
+.step{display:grid;grid-template-columns:42px minmax(0,1fr);gap:12px;padding:12px 14px;border-top:1px solid var(--line);align-items:start}
+.step:first-child{border-top:0}
+.step b{font-family:var(--mono);font-size:13px;color:var(--accent);padding-top:2px}
+.step .who{font-weight:600}
+.step .what{color:var(--ink2);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:720px){.grid{grid-template-columns:1fr}}
+.role{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:8px;min-width:0;align-content:start}
+.role h3{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.role h3 span{font:500 12px var(--mono);color:var(--ink3)}
+.role .row{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;font-size:14px}
+.role .row b{color:var(--ink3);font-weight:600;font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
+.role.opt{border-style:dashed}
+.never{color:var(--accent)}
+.note{background:var(--note);color:var(--note-ink);border-radius:10px;padding:12px 14px;font-size:14px;max-width:none}
+.warn{background:var(--warn);color:var(--warn-ink);border-radius:10px;padding:12px 14px;font-size:14px;max-width:none}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.rules{display:grid;counter-reset:r}
+.rules div{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.rules div:first-child{border-top:0}
+.rules div::before{counter-increment:r;content:"O" counter(r);font-family:var(--mono);color:var(--accent);font-size:13px;padding-top:2px}
+.rules small{display:block;color:var(--ink3);font-size:13px;margin-top:2px}
+.muted{color:var(--ink3);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font:500 12px var(--mono);border:1px solid var(--line2);border-radius:999px;padding:3px 10px;background:var(--card)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header style="display:grid;gap:12px">
+  <div class="eyebrow">Bootstrap-environment · any stack · any agent tool · v0.1.0</div>
+  <h1>Set up any project, then run it with one Chief of Staff and a named session family</h1>
+  <p class="lede">This page is the human-readable version of the <code>bootstrap-environment</code> skill. Part one sets up the project: it detects the stack, installs dependencies from the lockfile, finds the best free plugins in the marketplaces and on GitHub, and proves each one works. Part two covers how the work is run afterwards: who does what, how a task moves, and which files hold everything.</p>
+</header>
+
+<section>
+  <h2>The idea in six lines</h2>
+  <ol>
+    <li><b>Detect, don't ask.</b> The stack, the lockfiles, the gate command and the work already in flight are read from disk. The owner is asked only the boundary questions and the session names.</li>
+    <li><b>Install automatically, within hard stops.</b> Dependencies, plugins, language-server binaries and each session's kit are installed without a stop gate. Anything paid, elevated, account-creating or unread is never installed.</li>
+    <li><b>The owner talks to one session</b>, the Chief of Staff. The family is staffed like an IT company: nine core sessions with fixed role IDs, Platform and Support started on demand, and any project lanes the owner names.</li>
+    <li><b>Each session knows its job and carries only its kit</b>: the skills and plugins its role needs, and nothing that belongs to another role.</li>
+    <li><b>Everything lives in the repository</b>: one board, one pending register, one log per session, one file per lesson.</li>
+    <li><b>The owner's word moves code to live.</b> It is typed in the releasing session's chat or relayed by the Chief of Staff with the exact words, the question that was asked, the shas, the pasted check and the sign-offs. Hotfix is the one shortcut, for live breakage only.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Part one: the bootstrap, phase by phase</h2>
+  <div class="flow">
+    <div class="step"><b>0</b><div><div class="who">Probe (read only)</div><div class="what">Runtimes, checked by running <code>--version</code>. A stack profile built from manifests and lockfiles. Brownfield state. Every agent's history on disk. Deploy blast radius. Secrets (where they are, never their values). Then the boundary questions to the owner.</div></div></div>
+    <div class="step"><b>1</b><div><div class="who">Baseline</div><div class="what">The context cost of always-loaded files and tooling, in characters and tokens. The final report is judged against this number.</div></div></div>
+    <div class="step"><b>2</b><div><div class="who">Dependencies by stack</div><div class="what">Lockfile-exact installs for each workspace, after the runtime version is checked. Then one <code>scripts/bootstrap</code> that runs the same way locally, in every worktree and in the cloud hook.</div></div></div>
+    <div class="step"><b>3</b><div><div class="who">Plugin discovery</div><div class="what">For each need (language server, framework, browser, design, security, docs, services), search what is installed, the added marketplaces, the official marketplace and GitHub. Score the candidates, run the trust check, and pick one per need.</div></div></div>
+    <div class="step"><b>4</b><div><div class="who">Install</div><div class="what">Settings are backed up first. Plugins go in at project scope with their server binaries. GitHub sources are pinned to a commit SHA.</div></div></div>
+    <div class="step"><b>5</b><div><div class="who">Verify</div><div class="what">A real LSP query, a real MCP call, a real browser action, and every branch of every hook. Only what passes is enabled; the rest is marked BLOCKED with the action that would unblock it.</div></div></div>
+    <div class="step"><b>6</b><div><div class="who">Scaffold</div><div class="what"><code>AGENTS.md</code>, the board, the register, memory, the gate and the memory CLI. Existing conventions are absorbed, never overwritten.</div></div></div>
+    <div class="step"><b>7</b><div><div class="who">Session family</div><div class="what">The owner names the sessions, each kit is narrowed per worktree, then the sessions start in order and each one restates the rules.</div></div></div>
+    <div class="step"><b>8–10</b><div><div class="who">Seed, prove, report</div><div class="what">Mine lessons from history, deliberately break <code>check</code> to show it catches the fault, run the gate and one real user path, then report PASS, PARTIAL, BLOCKED or FAILED. No feature work starts until the owner says so.</div></div></div>
+  </div>
+  <div class="warn"><b>Hard stops, even in automatic mode:</b> anything that costs money, needs an account or asks you to accept terms. Anything that needs admin rights or a system-wide install. Anything that touches a REAL database or service. A GitHub plugin whose hooks and MCP config have not been read. More than two existing files changed at once. HIGH or CRITICAL work without the owner's typed go.</div>
+</section>
+
+<section>
+  <h2>Dependencies: lockfile to command</h2>
+  <p class="muted">Install, never update. The runtime version comes from <code>.nvmrc</code>, <code>.python-version</code>, <code>.tool-versions</code>, <code>require.php</code>, <code>go.mod</code> and similar files, and is installed only through a user-level version manager. If the code came from outside the owner, lifecycle scripts stay off until they have been read.</p>
+  <div class="tbl"><table>
+    <tr><th>Lockfile</th><th>Command</th></tr>
+    <tr><td><code>composer.lock</code></td><td><code>composer install --no-interaction --prefer-dist</code></td></tr>
+    <tr><td><code>package-lock.json</code></td><td><code>npm ci</code></td></tr>
+    <tr><td><code>pnpm-lock.yaml</code></td><td><code>pnpm install --frozen-lockfile</code></td></tr>
+    <tr><td><code>yarn.lock</code></td><td>v1 <code>yarn install --frozen-lockfile</code> · berry <code>yarn install --immutable</code></td></tr>
+    <tr><td><code>bun.lock</code></td><td><code>bun install --frozen-lockfile</code></td></tr>
+    <tr><td><code>uv.lock</code> · <code>poetry.lock</code> · <code>Pipfile.lock</code></td><td><code>uv sync --frozen</code> · <code>poetry install --sync</code> · <code>pipenv sync --dev</code></td></tr>
+    <tr><td><code>requirements*.txt</code></td><td>a <code>.venv</code>, then pip install each file</td></tr>
+    <tr><td><code>go.sum</code> · <code>Cargo.lock</code></td><td><code>go mod download</code> · <code>cargo fetch --locked</code></td></tr>
+    <tr><td><code>Gemfile.lock</code></td><td><code>bundle config set --local frozen true</code>, then <code>bundle install</code></td></tr>
+    <tr><td><code>*.csproj</code> / <code>packages.lock.json</code></td><td><code>dotnet restore --locked-mode</code></td></tr>
+    <tr><td><code>pom.xml</code> · Gradle</td><td><code>mvn -B dependency:go-offline</code> · <code>./gradlew dependencies</code></td></tr>
+    <tr><td><code>pubspec.lock</code> · <code>mix.lock</code> · <code>Package.resolved</code> · <code>deno.lock</code></td><td><code>flutter pub get --enforce-lockfile</code> · <code>mix deps.get</code> · <code>swift package resolve</code> · <code>deno install --frozen</code></td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>Plugins: search everywhere, pick one per need</h2>
+  <div class="grid">
+    <div class="role"><h3>Where it looks</h3>
+      <ol>
+        <li>Plugins already installed on this machine</li>
+        <li>Marketplaces already added</li>
+        <li>The official Anthropic marketplace</li>
+        <li>GitHub: <code>gh search repos</code>, <code>gh search code</code> for <code>.claude-plugin/plugin.json</code>, the framework's own org, and a web search</li>
+      </ol></div>
+    <div class="role"><h3>How it chooses</h3>
+      <ul>
+        <li><b>Must:</b> fits this stack and version, has a usable licence, is free, and doesn't duplicate another pick</li>
+        <li><b>High:</b> official (Anthropic or the framework's org), maintained (commits in the last 6 months)</li>
+        <li><b>Medium:</b> adoption (stars, forks), context cost</li>
+        <li><b>Trust check (non-official only):</b> reject on hooks that call the network or run downloaded code, on obfuscated code, or on unpinned <code>npx</code>/<code>uvx</code> MCP servers</li>
+      </ul></div>
+  </div>
+  <div class="tbl"><table>
+    <tr><th>Language</th><th>Official LSP plugin</th><th>Server binary</th></tr>
+    <tr><td>PHP</td><td><code>php-lsp</code></td><td><code>npm i -g intelephense</code></td></tr>
+    <tr><td>TypeScript / JS</td><td><code>typescript-lsp</code></td><td><code>npm i -g typescript-language-server typescript</code></td></tr>
+    <tr><td>Python</td><td><code>pyright-lsp</code></td><td><code>npm i -g pyright</code></td></tr>
+    <tr><td>Go</td><td><code>gopls-lsp</code></td><td><code>go install golang.org/x/tools/gopls@&lt;ver&gt;</code></td></tr>
+    <tr><td>Rust</td><td><code>rust-analyzer-lsp</code></td><td><code>rustup component add rust-analyzer</code></td></tr>
+    <tr><td>Ruby</td><td><code>ruby-lsp</code></td><td><code>gem install ruby-lsp</code></td></tr>
+    <tr><td>C#</td><td><code>csharp-lsp</code></td><td><code>dotnet tool install -g csharp-ls</code></td></tr>
+    <tr><td>Java · Kotlin · C/C++ · Swift</td><td><code>jdtls-lsp</code> · <code>kotlin-lsp</code> · <code>clangd-lsp</code> · <code>swift-lsp</code></td><td>jdtls · kotlin-lsp · clangd · sourcekit-lsp</td></tr>
+  </table></div>
+  <p class="muted">Shared picks to consider for every project:</p>
+  <div class="chips"><span>superpowers</span><span>playwright</span><span>frontend-design</span><span>code-review</span><span>pr-review-toolkit</span><span>security-guidance</span><span>context7</span><span>commit-commands</span><span>claude-md-management</span></div>
+  <p class="note">Install with <code>claude plugin install &lt;plugin&gt;@&lt;marketplace&gt; --scope project</code>. For a GitHub source, first run <code>claude plugin marketplace add &lt;owner&gt;/&lt;repo&gt;</code> and record the commit SHA. Check the CLI's own <code>--help</code> before relying on any flag. A language-server plugin is only a config shim: it counts as working once the server binary answers a real query in this codebase.</p>
+</section>
+
+<section>
+  <h2>Part two: the session family</h2>
+  <p class="muted">Nine core roles start in every project. Platform and Support (dashed cards) start when there is a live system or real users; until then Release Ops and the Librarian cover their duties. Role IDs are fixed. They name the log files and are the words used in <code>AGENTS.md</code>. Display names come from the owner. Before starting anything, the Chief of Staff shows one table (role, its job in this project, a proposed name, its kit), and the owner confirms or renames each one and chooses which project lanes to add. Model routing: the strongest model for the Chief of Staff, a mid model for the rest, the cheapest for the Librarian. Hotfix always runs in the cloud. Remote Control is on for every local session.</p>
+  <div class="grid">
+    <div class="role"><h3>Chief of Staff <span>chief-of-staff · strongest</span></h3>
+      <div class="row"><b>Job</b><span>The owner's single contact. Turns asks into tasks, decides risk, assigns work, re-reads every commit from the remote, relays the owner's words, keeps the sign-off grid, nudges idle sessions, verifies live and closes rows.</span></div>
+      <div class="row"><b>Kit</b><span>Session tools, the artifact reader, read-only git, a cheap gatekeeper agent, a scout agent for reads, memory notes.</span></div>
+      <div class="row"><b>Never</b><span class="never">Pushes live, runs server commands, decides for the owner, delegates a decision, relays more than the owner's question covered.</span></div></div>
+    <div class="role"><h3>Librarian <span>librarian · cheapest</span></h3>
+      <div class="row"><b>Job</b><span>Lessons, the decisions trail, board and register hygiene, the research and artifact index. Sends "lessons that apply" at each task start and asks "log + lesson?" at each hand-off.</span></div>
+      <div class="row"><b>Kit</b><span>Memory CLI (<code>mem</code>, <code>check</code>, <code>index</code>, <code>report</code>), a memory-consolidation skill. Docs commits only.</span></div>
+      <div class="row"><b>Never</b><span class="never">Code, decisions, blocking anyone, editing AGENTS.md on a relayed word.</span></div></div>
+    <div class="role"><h3>Researcher <span>researcher · mid</span></h3>
+      <div class="row"><b>Job</b><span>Facts before design or build: code with file:line, real volumes read-only, what other systems do, options with trade-offs.</span></div>
+      <div class="row"><b>Kit</b><span>Code search and scout agents, the stack's query and timing tools, EXPLAIN on a copy, library-docs lookup, a browser, read-only Playwright timing.</span></div>
+      <div class="row"><b>Never</b><span class="never">App code, writes to any real database.</span></div></div>
+    <div class="role"><h3>Design <span>design · mid/strong</span></h3>
+      <div class="row"><b>Job</b><span>Artifacts with today beside proposed, every role, 1440 and 390 widths, both themes, in the project's tokens. Checks each new artifact against the ones already approved. Signs off built screens and rejects drift.</span></div>
+      <div class="row"><b>Kit</b><span>The Artifact tool with artifact-design, DESIGN.md, frontend-design and design-review skills, a UI/UX reference skill, dataviz.</span></div>
+      <div class="row"><b>Never</b><span class="never">Code, or signing a screen it has no shot of.</span></div></div>
+    <div class="role"><h3>Builder <span>builder · mid</span></h3>
+      <div class="row"><b>Job</b><span>Builds from the approved artifact and notes: small commits on its own branch, proof with each one, help text and pictures, and shots of every screen piece it touched, whether asked about or not. HIGH work only after the owner's go.</span></div>
+      <div class="row"><b>Kit</b><span>The framework plugin, a minimal-change skill, writing-plans and TDD, Playwright on the copy, the gate. HIGH work is reviewed by the Tech Lead.</span></div>
+      <div class="row"><b>Never</b><span class="never">Pushes to dev before sign-offs, touches live, adds a permission key without approval.</span></div></div>
+    <div class="role"><h3>QA <span>qa · mid</span></h3>
+      <div class="row"><b>Job</b><span>Writes acceptance checks before code. Then tests on a copy: per-role screenshots, figure checks, rolled-back form tests, an access snapshot. Reports PASS or FAIL with file:line.</span></div>
+      <div class="row"><b>Kit</b><span>Playwright and a browser, crawl and timing scripts, figure checks, its own database copy, a test-strategy skill.</span></div>
+      <div class="row"><b>Never</b><span class="never">Fixes code, writes to live or real data.</span></div></div>
+    <div class="role"><h3>Tech Lead <span>tech-lead · strong</span></h3>
+      <div class="row"><b>Job</b><span>The senior engineer. Writes architecture decisions as ADRs, owns code standards, and reviews every code diff for correctness and design. Owns schema and migration review and the independent review of HIGH work. Plans dependency upgrades as their own rows.</span></div>
+      <div class="row"><b>Kit</b><span>The framework plugin and LSP, code-review and PR-review skills, an architecture skill, the stack's migration and schema diff tools.</span></div>
+      <div class="row"><b>Never</b><span class="never">Writes the feature it reviews, approves its own code, decides product scope.</span></div></div>
+    <div class="role"><h3>Security <span>security · mid/strong</span></h3>
+      <div class="row"><b>Job</b><span>Application security. Reviews every piece that touches auth, permissions, money, tenancy, uploads, external input, secrets or new dependencies. Owns the gate's audit and secret scan, and the trust check for new plugins. Writes a threat note for each HIGH row.</span></div>
+      <div class="row"><b>Kit</b><span>The security-review skill or the claude-security / security-guidance plugins, the stack's dependency audit, a secret scanner, an OWASP-style checklist.</span></div>
+      <div class="row"><b>Never</b><span class="never">Fixes code (it files findings to the Builder), signs off its own fixes, scans live.</span></div></div>
+    <div class="role"><h3>Release Ops <span>release-ops · mid</span></h3>
+      <div class="row"><b>Job</b><span>Releases batches the sign-off grid shows complete. Pre-stages a dry run (merge, gate, migration list) before asking. Pushes live on "release &lt;scope&gt;", typed in its chat or relayed by the Chief of Staff, with the pre-release check pasted. Watches the deploy and merges back.</span></div>
+      <div class="row"><b>Kit</b><span>Release worktrees, the gate, the version endpoint, a deploy-checklist skill.</span></div>
+      <div class="row"><b>Never</b><span class="never">Hotfixes, HIGH builds, a release without the pasted check, a peer's message taken as the release word.</span></div></div>
+    <div class="role"><h3>Hotfix <span>hotfix · mid · cloud</span></h3>
+      <div class="row"><b>Job</b><span>Live breakage only: reproduce, fix, gate, short QA check, then push live on "apply", typed in its chat or relayed by the Chief of Staff. Owns the server lines the owner runs, each reported first. When it moves to the cloud, its local copy is archived at once.</span></div>
+      <div class="row"><b>Kit</b><span>The cloud start hook (bootstrap plus a throwaway database), systematic debugging, cherry-pick onto live.</span></div>
+      <div class="row"><b>Never</b><span class="never">Features, redesigns, any push without "apply", running locally.</span></div></div>
+    <div class="role opt"><h3>Platform <span>platform · on demand</span></h3>
+      <div class="row"><b>Job</b><span>The running system: CI, environments, the shared database server and per-session copies, backups and restore drills, monitoring, error logs, performance budgets, a post-deploy watch and infrastructure cost. Writes every server line for the owner. Started once there is a live environment.</span></div>
+      <div class="row"><b>Kit</b><span>CI and container tools, the database client, read-only monitoring and logs, an SRE runbook skill, the deploy checklist.</span></div>
+      <div class="row"><b>Never</b><span class="never">Pushes live, runs server commands itself, changes infrastructure without a HIGH go.</span></div></div>
+    <div class="role opt"><h3>Support <span>support · on demand</span></h3>
+      <div class="row"><b>Job</b><span>The users' voice. Turns user reports and error spikes into board rows with steps to reproduce, triages severity (live breakage goes to Hotfix), and writes user-facing release notes and help pages. Started once real users exist.</span></div>
+      <div class="row"><b>Kit</b><span>A ticket or feedback connector if the project has one, a UX-copy skill, the browser on the invented-data copy.</span></div>
+      <div class="row"><b>Never</b><span class="never">Code, promising users dates, sharing real user data.</span></div></div>
+    <div class="role opt"><h3>Project lane <span>optional · 0..n · owner names it</span></h3>
+      <div class="row"><b>Job</b><span>One cross-cutting area, such as onboarding, billing, integrations or a mobile app. Same rules as Builder, with its own branch and its own rows.</span></div>
+      <div class="row"><b>Kit</b><span>The Builder's kit, plus throwaway databases for fresh-install proofs and writing-plans before any HIGH step.</span></div>
+      <div class="row"><b>Never</b><span class="never">Live, HIGH work without the go, another lane's files without coordinating.</span></div></div>
+  </div>
+  <p class="note"><b>How a kit is enforced:</b> plugins are installed once at project scope. Each session's worktree then turns off everything outside its kit in its own <code>.claude/settings.local.json</code>. Every session's skill list is checked to confirm it shows only its kit. A stack skill that doesn't exist for this stack is left out, never replaced with one for another stack.</p>
+</section>
+
+<section>
+  <h2>How a piece of work flows</h2>
+  <div class="flow">
+    <div class="step"><b>1</b><div><div class="who">Owner → Chief of Staff</div><div class="what">The ask arrives in plain words. The Chief of Staff names the task, sets its risk (LOW, MEDIUM, HIGH) and picks the sessions.</div></div></div>
+    <div class="step"><b>2</b><div><div class="who">Librarian</div><div class="what">Adds the board row and sends the lessons and past decisions that apply.</div></div></div>
+    <div class="step"><b>3</b><div><div class="who">Researcher</div><div class="what">Facts with file:line and real volumes from a read-only copy.</div></div></div>
+    <div class="step"><b>4</b><div><div class="who">Design</div><div class="what">An artifact showing today beside the proposal. Skipped when no screen changes.</div></div></div>
+    <div class="step"><b>5</b><div><div class="who">Owner approves</div><div class="what">One question. The owner's words and the date go on the board. HIGH work also needs a typed go, either in the building session or relayed by the Chief of Staff with the exact words and date.</div></div></div>
+    <div class="step"><b>6</b><div><div class="who">QA, before code</div><div class="what">Acceptance checks taken from the artifact.</div></div></div>
+    <div class="step"><b>7</b><div><div class="who">Builder or project lane</div><div class="what">Small commits on its own branch, each with proof.</div></div></div>
+    <div class="step"><b>8</b><div><div class="who">Sign-offs</div><div class="what">QA on the branch, Design against the artifact, the Tech Lead on the code, Security where a sensitive surface is touched, the Librarian on lessons applied, and the Chief of Staff on scope, each one ticked in the board's sign-off grid. Only then does it go to the dev branch. In batch mode, finished pieces wait on their branches until the whole batch is signed off.</div></div></div>
+    <div class="step"><b>9</b><div><div class="who">Release Ops → Owner</div><div class="what">Dry run, batch, gate, ask. The owner's "release &lt;scope&gt;" is typed in Release Ops or relayed by the Chief of Staff. Release Ops pushes and watches the deploy.</div></div></div>
+    <div class="step"><b>10</b><div><div class="who">Chief of Staff</div><div class="what">Verifies live, closes the row with the sha, and the Librarian asks "log and lesson written?".</div></div></div>
+  </div>
+  <p class="note"><b>Hotfix lane</b> (live breakage only): reproduce, fix, gate, short QA check, then the owner's "apply", typed in Hotfix or relayed. Hotfix pushes and the Chief of Staff verifies.</p>
+</section>
+
+<section>
+  <h2>The owner's word, typed or relayed</h2>
+  <p>Three words move things: a HIGH <b>go</b>, <b>"release &lt;scope&gt;"</b> and <b>"apply"</b>. Each one counts when the owner types it in the acting session's chat, or when the Chief of Staff relays it. All risk levels qualify. A relay must carry all four of these:</p>
+  <div class="grid">
+    <div class="role"><h3>1 · Words and question</h3><p>The owner's exact words and the date, plus the question exactly as it was asked. The answer covers only what the question covered.</p></div>
+    <div class="role"><h3>2 · Scope</h3><p>The shas, in the order they sit on the dev branch. For a go, the board row and what it covers.</p></div>
+    <div class="role"><h3>3 · Pasted check</h3><p>The output of the named pre-release check. No pasted check means no release.</p></div>
+    <div class="role"><h3>4 · Sign-offs</h3><p>The piece's row in the sign-off grid, with every box filled.</p></div>
+  </div>
+  <p class="note">The relay is written on the board before it is sent. The acting session echoes the scope back and refuses on any mismatch, any paraphrase without a scope, or any brief that names more than the owner's question did. Only the Chief of Staff relays, and a peer's message is never the owner's word. <b>Why relays are allowed:</b> relays were first forbidden, and signed-off work then waited for hours. The real risk turned out to be scope, not which chat the word was typed in: a brief once covered more than the owner's "yes", and two commits had to be reverted.</p>
+</section>
+
+<section>
+  <h2>Keeping many sessions in step</h2>
+  <ul>
+    <li><b>Sign-off grid on the board:</b> piece · sha · QA · Design · Tech Lead · Security · Librarian · Chief of Staff · date. No session approves its own work. An empty box blocks the push. Docs-only and picture-only commits skip the Librarian box.</li>
+    <li><b>Freeze only when every sign-off is in.</b> A fix after a freeze re-opens QA, Design and Release Ops for that piece. In one release, "frozen" was followed by "one more fix" four times.</li>
+    <li><b>Every message names its sha and says "supersedes X"</b> when it replaces an earlier one. Queued messages arrive late: a Builder acted on a withdrawn ruling, and QA tested a stale tip.</li>
+    <li><b>Mind the message cap</b> (roughly 10–20 between owner turns). Send fewer, fuller messages. When a chain stalls, ask the owner to type anything.</li>
+    <li><b>Nudge idle sessions.</b> A session waiting on a background job can stop.</li>
+    <li><b>Render what workers can't open</b>, such as PDFs, into images before handing them to QA and Design.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>How the rules are enforced</h2>
+  <p>Rules that live only in prose get skipped, so four layers check them:</p>
+  <div class="tbl"><table>
+    <tr><th>Layer</th><th>What it catches</th><th>Works in</th></tr>
+    <tr><td>1 · Pre-tool guard (<code>guard.mjs</code>)</td><td>Force-pushes, <code>--no-verify</code>, hook tampering, server commands, live pushes by the wrong role, docs-only roles writing code, protected config</td><td>Claude Code, and other tools where a hook can block</td></tr>
+    <tr><td>2 · Per-worktree permissions (<code>bootstrap role</code>)</td><td>The role's deny list; plugins narrowed to its kit</td><td>Claude Code; partly elsewhere</td></tr>
+    <tr><td>3 · Git pre-push (<code>.githooks/pre-push</code>)</td><td>Code without complete sign-off files for that sha; live pushes without a release record; deleting live or dev; conflict markers</td><td>Every tool and every human</td></tr>
+    <tr><td>4 · Server branch protection</td><td>Anything pushed from a machine without the hooks, including cloud agents</td><td>The git host (turn it on)</td></tr>
+  </table></div>
+  <p class="note">Sign-offs are files, one per role per piece: <code>bootstrap signoff &lt;piece&gt; --verdict PASS</code> writes <code>docs/signoffs/&lt;piece&gt;/&lt;role&gt;.md</code> with the sha. A release record comes from <code>bootstrap release</code>, which refuses to write one without the owner's words, the question, the shas and a pasted check.</p>
+</section>
+
+<section>
+  <h2>The files that hold the work</h2>
+  <div class="tbl"><table>
+    <tr><th>File</th><th>What it is</th><th>Who writes it</th></tr>
+    <tr><td><code>AGENTS.md</code> (+ <code>CLAUDE.md</code> → <code>@AGENTS.md</code>)</td><td>Standing rules, boundary answers, risk levels, the roster with names and kits, the start order and the start ritual. There are no separate hand-over files: a hand-over is the last log entry plus the board rows.</td><td>Chief of Staff, only on the owner's typed word.</td></tr>
+    <tr><td><code>docs/plans/BOARD.md</code></td><td>The ownership map, QUESTIONS (dated, each with a recommendation, answered in place), OPEN rows (claimed before code), the SIGN-OFF GRID, RELAYS (each relayed owner word with its question and scope) and DONE rows with the sha.</td><td>Every session, one row at a time, as docs commits.</td></tr>
+    <tr><td><code>docs/plans/pending-register.md</code></td><td>What is waiting on the owner, waiting on a session, or promised and not delivered.</td><td>Librarian.</td></tr>
+    <tr><td><code>docs/memory/logs/&lt;role-id&gt;.md</code></td><td>Each session's log, newest first. The last entry is the hand-over. Pushed after every entry.</td><td>The session itself.</td></tr>
+    <tr><td><code>docs/memory/lessons/L###-*.md</code></td><td>One immutable file per lesson: triggers, files, cost, evidence, status.</td><td>Whoever learned it.</td></tr>
+    <tr><td><code>scripts/bootstrap</code> · <code>scripts/gate</code> · <code>.bootstrap/bin/</code></td><td>Setup that runs the same locally, in worktrees and in the cloud; the one gate; the memory CLI.</td><td>Written by the bootstrap; changed with care.</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>Rules every session restates before it works</h2>
+  <div class="rules">
+    <div><span>Evidence, or UNKNOWN. "Done" only with command and output beside it, re-checked from the diff.<small>Helper sessions report confidently, and several "fixed" claims weren't.</small></span></div>
+    <div><span>One gate command before every push, with its output pasted into the report. It loads every page as every role, fails on any route without an access guard, and runs the stack's dependency audit and a secret scan of the diff.<small>A staff 500 on every phone page passed a gate that never loaded pages per role.</small></span></div>
+    <div><span>Design before build for anything a person looks at, with today shown beside the proposal.<small>Builds from a sentence were rebuilt; builds from a drawing went in once.</small></span></div>
+    <div><span>One key to live: the owner's release word, either typed in the releasing session or relayed in full (words and question, shas, pasted check, sign-offs).<small>A vague "yes" once nearly released unreviewed work. Forbidding relays stalled signed-off work, so the owner allowed them in full form.</small></span></div>
+    <div><span>Tour the data read-only before touching a rule. Use invented-data copies for pictures and tests.<small>The costly surprises were all in the data.</small></span></div>
+    <div><span>Live commands are reported exactly first and logged with the server time after.<small>The owner must see what touched live and when.</small></span></div>
+    <div><span>Help text and pictures ship with each screen change, and the gate checks them.<small>Docs written separately die within a month.</small></span></div>
+    <div><span>A scripted walk after every batch: every page, every role, two widths, both themes.<small>A dead Cancel button lived for weeks.</small></span></div>
+    <div><span>Dated rules carry their date and reason.<small>Otherwise the rule gets argued every time it bites.</small></span></div>
+    <div><span>Sign-offs before any code push (hotfix excepted), tracked in the grid. Docs-only and picture-only commits push at once and never need a go.<small>Code reached dev before QA looked, and held docs writes hid work from the repo.</small></span></div>
+    <div><span>A push never follows a failed script. Check for conflict markers first.<small>A board file full of conflict markers was pushed once.</small></span></div>
+    <div><span>Questions go on the board with a recommendation. Replies to the owner are plain, one question at a time.<small>Questions left in chat were lost.</small></span></div>
+    <div><span>Every scratch script names its database in the same command.<small>Scratch writes once landed in the real app database.</small></span></div>
+    <div><span>Moving access from a role type to a permission tick is HIGH. Compare every live role old against new, and never pick a tick that grants other powers too.<small>A tick that looked equivalent quietly widened access.</small></span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Starting the family</h2>
+  <ol>
+    <li>Run the bootstrap (Phases 0–6). The owner answers the boundary questions.</li>
+    <li>The Chief of Staff shows the naming table. The owner confirms names, kits and project lanes, and the mapping goes into <code>AGENTS.md</code>.</li>
+    <li>Each writing session gets its own worktree, where <code>scripts/bootstrap</code> builds <b>real</b> dependency folders (never links to another checkout) and its own database copy. Its kit goes into <code>settings.local.json</code>. There is one local database server, started once outside any session; check the port before starting another.</li>
+    <li>Start order: Librarian, Release Ops, Hotfix (cloud), Tech Lead, Security, QA, Researcher, Design, Builder, then Platform and Support when due, then the project lanes. Remote Control is on for each one.</li>
+    <li>Each session's first message carries its role row, its kit, the full rules (not a summary) and its hand-over. It restates the rules, lists what it inherited and names its first action, then waits for confirmation.</li>
+    <li>Start ritual, every time: <code>AGENTS.md</code>, the board, the lessons its rows name, then print its rows. End of every task: the row is updated, the log is pushed, and a lesson is written (or "no lesson" is recorded).</li>
+    <li>The owner archives old sessions only after the new family has acknowledged.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Mistakes already paid for</h2>
+  <ul>
+    <li>Sessions acknowledged a summary of the rules, not the rules themselves. Brief with the whole section and audit against it.</li>
+    <li>Two sessions linked their dependency folder to another checkout and tested the wrong code.</li>
+    <li>On Windows, <code>python</code> resolved to a Store stub. A path check passed while the runtime was missing.</li>
+    <li>A guard hook crashed on load and silently allowed everything. Hooks are run before they are enabled.</li>
+    <li>A capability boundary between agents was assumed and turned out false. Probe it, don't assume it.</li>
+    <li>The local setup and the cloud setup were described separately and drifted apart. One <code>scripts/bootstrap</code> serves both.</li>
+    <li>A database server ran inside one session's preview process and stopped five times in a day.</li>
+    <li>Work went to a stale local Hotfix for two days after Hotfix had moved to the cloud. Archive the local copy at once.</li>
+    <li>A relay brief covered more than the owner's "yes", and two commits were reverted. Quote the owner's question, and scope only to it.</li>
+    <li>A screen piece nobody asked about had no shots, so Design nearly missed it. Two approved artifacts also contradicted each other.</li>
+  </ul>
+  <p class="muted">Source, tools and tests: <a href="https://github.com/AnfalHaider/Bootstrap-environment">github.com/AnfalHaider/Bootstrap-environment</a>.</p>
+</section>
+
+</div>
+</body>
+</html>
