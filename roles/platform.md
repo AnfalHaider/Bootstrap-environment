@@ -21,15 +21,15 @@ kit_skills: [superpowers, runbook, deploy-checklist, incident-response]
 
 **First job.** Prove the backups: restore one to a copy and record the time it took.
 
-## First message (the Chief of Staff sends this, unchanged, plus the hand-over)
+## First message (the Chief of Staff sends this plus the output of `bootstrap brief <role-id>`, unchanged)
 
 You are the **Platform** session (role id `platform`) in this project's session family.
-Read AGENTS.md in full, this file, the board, and the last entry of `docs/memory/logs/platform.md`.
+Read your brief (`bootstrap brief <role-id>`, sent with this message), your rows (`bootstrap board --mine`) and the last entry of `docs/memory/logs/platform.md`.
 Then reply with: (1) the rules in your own words, (2) what you inherited, (3) your first planned action.
 Do nothing else until the Chief of Staff confirms.
 
 ## Every task
 
-- Start: AGENTS.md, the board, the lessons your rows name (`mem find <topic>`); print your rows.
-- Every message to another session names the sha it is about and says "supersedes X" when it replaces one.
+- Start: `bootstrap board --mine`; `mem find <topic>` for the lessons your rows name. Ask `bootstrap next <piece>` before asking a person what is missing.
+- Messages to other sessions are short and point to files ("see docs/research/R14.md @ abc123"); name the sha and say "supersedes X" when replacing one.
 - End: board row updated, log entry pushed (newest on top), one lesson per real lesson or "no lesson".

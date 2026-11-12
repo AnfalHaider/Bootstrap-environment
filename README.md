@@ -9,7 +9,7 @@ It ships as an [Agent Skill](https://agentskills.io) plus a dependency-free Node
 Claude Code plugin, with adapters for Cursor, Codex, GitHub Copilot, Antigravity, Devin Desktop, Kiro,
 OpenCode, Cline, Aider, Zed, Junie, Amp and ChatGPT.
 
-> Status: **0.3.0, early.** The enforcement scripts and the flow editor have a test suite (48 tests, real temporary git repos). The per-tool adapters follow vendor docs as of November 2026 and are not yet tested inside each tool — see [TODO.md](TODO.md).
+> Status: **0.4.0, early.** The enforcement scripts, the flow editor and the token-saving commands have a test suite (58 tests, real temporary git repos). The per-tool adapters follow vendor docs as of November 2026 and are not yet tested inside each tool — see [TODO.md](TODO.md).
 
 ## What it does
 
@@ -40,6 +40,7 @@ New to this? Open the visual editor (below). Every term on it has a plain-langua
 | Any code joins the dev branch | the sessions its lane requires (Normal: QA, Tech Lead, Librarian, Chief of Staff) | pre-push hook |
 | The code touches login, payments, uploads, secrets | + Security | pre-push hook (file conditions) |
 | The code changes a screen | + Design, **and your recorded approval of the design** (with a link to it) | pre-push hook |
+| Any sign-off | must carry **evidence** (a command and its output, or file:line); a bare PASS is ignored | pre-push hook |
 | The work is HIGH risk (schema, money, permissions…) | + Security, **and your recorded "go"** before it can land | pre-push hook |
 | Anything goes live | Release Ops (or Hotfix), **your "release"/"apply"** with the question you answered, the shas and a pasted check | pre-push hook |
 | Code is not on a lane yet | refused: the Chief of Staff must route every piece (`bootstrap piece R12 --lane normal`) | pre-push hook |
@@ -54,6 +55,27 @@ The guard blocks other sessions from writing these, by file or by command, and t
 **Not checked by the tools:** conversations, plans and research (nothing is pushed), commands run outside git, and docs-only commits (deliberately free).
 
 **Honest limit:** all sessions on one machine share one git identity. A determined person can still edit files outside the AI tools. Server-side checks with a separate identity per role are on the [TODO](TODO.md).
+
+## Light on tokens
+
+The sessions are permanent (nested under the Chief of Staff wherever the tool supports it), so what each one *reads* is paid again and again. Measured on a fresh project:
+
+| | Before (0.3) | Now (0.4) |
+|---|---|---|
+| Loaded in every session (AGENTS.md + CLAUDE.md) | ~1,350 tokens | ~1,050 tokens |
+| A session's start (its rules + its part in the flow) | ~5,800 tokens (whole rulebook) | ~700–1,300 tokens (`bootstrap brief <role>`) |
+| **Total to start one session** | **~7,000** | **~2,000 (about 70% less)** |
+| Guard hook per command | ~220 ms | ~115 ms |
+
+How:
+- **One brief per role.** `bootstrap brief qa` gives QA every rule that applies to QA, in full with its reason, and none of the release rules it never uses. The rules live once, in `flow/rules.json`.
+- **Ask the tools, not the files:**
+  - `bootstrap next R14`: what's still missing, and who acts next.
+  - `bootstrap board --mine`: only your rows.
+  - `mem find <topic>`: only the lessons that match.
+- **Short messages that point to files** ("see docs/research/R14.md @ abc123"), never pasted content.
+- **The board stays small.** `bootstrap board archive` moves old DONE rows out. `bootstrap cost` shows each session's start cost and warns when something grows.
+- **Right-sized from day one.** `bootstrap init --size prototype|small|live` picks Solo, Small team or Full company.
 
 ## How information flows
 

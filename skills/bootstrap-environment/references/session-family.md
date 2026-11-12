@@ -162,8 +162,8 @@ one. *Why:* work was sent to a stale local Hotfix for two days after it had move
 **7J. Remote Control ON for every local session**, turned on by the Chief of Staff as it starts each
 one, so the owner can read and answer from a phone; the owner's typed word counts the same from there.
 
-**7K. Starting a session.** First message = its role row, its kit, the operating rules (6B) **in full,
-not a summary**, its hand-over (the last entry of its log plus its board rows — there are no separate
+**7K. Starting a session.** First message = its role file plus the output of `bootstrap brief <role-id>`: **every rule that
+applies to that role, in full with its reason** (not a summary, and not the rules of other roles), its hand-over (the last entry of its log plus its board rows — there are no separate
 hand-over files), and: "restate the rules in your own words, list what you inherited, name your first
 action; do nothing else until confirmed." The Chief of Staff checks the reply against the hand-over
 before giving work. Start order: Librarian, Release Ops, Hotfix (cloud), Tech Lead, Security, QA, Researcher,

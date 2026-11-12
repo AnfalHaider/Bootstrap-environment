@@ -43,6 +43,19 @@ Status key: **DONE** (built and tested here) · **BUILT** (written, not yet test
 | Editor: welcome card, plain-language intros, field hints, Help glossary, friendly check labels, approval switches | DONE | checked in a browser at desktop and phone width |
 | Separate identity per role (signed commits or bot accounts) + server-side checks | NEXT | the only way to make sign-offs unforgeable by someone working outside the AI tools |
 
+## 0.4.0 — light on tokens
+
+| Item | Status | Evidence / note |
+|---|---|---|
+| `bootstrap brief <role>`: role-tagged rules (`flow/rules.json`), ~1k tokens per session start instead of ~7k | DONE | `tests/ops.test.mjs` "a brief is far smaller"; `bootstrap cost` on a fresh project |
+| AGENTS.md keeps only the five rules everyone needs; the rest live once in the rule file | DONE | always-loaded ~1,350 → ~1,050 tokens |
+| `next <piece>`, `board --mine`, `board archive`, `cost` | DONE | 5 tests |
+| `piece --suggest` (lane + extra checks from changed files) | DONE | 1 test |
+| Sign-offs need evidence (CLI refuses; push check ignores a bare PASS and says so) | DONE | 3 tests |
+| `init --size prototype\|small\|live` → Solo / Small team / Full company | DONE | 1 test |
+| Guard ~220 → ~115 ms (no git process per call) | DONE | measured; ~70 ms of the rest is Node start-up |
+| Permanent nested sessions stay the model (no short-lived reviewers) | DECIDED | owner's choice, 2026-11-12 |
+
 ## NEXT — make it trustworthy outside Claude Code
 
 1. **Install from GitHub and prove it, per tool.** Claude Code first: `marketplace add` + `install` + run the skill on a sample repo. Then Cursor, Codex, Copilot, Antigravity and Devin.

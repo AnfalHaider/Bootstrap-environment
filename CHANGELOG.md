@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 — 2026-11-12
+
+- **Per-role briefs** (`bootstrap brief <role>`): each session's first message holds only its own rules, in full with their reasons, plus its part in the flow. The rules live once in `flow/rules.json`. A session start goes from ~7,000 to ~2,000 tokens.
+- **AGENTS.md is slimmer:** the five rules everyone needs plus a pointer, so ~300 fewer tokens in every session.
+- **Commands that answer instead of files to read:** `next <piece>`, `board --mine`, `board archive`, `cost`, `piece --suggest`.
+- **Evidence required:** a PASS without evidence is refused by the CLI and ignored by the push check, which says so.
+- `init --size prototype|small|live` picks a fitting preset.
+- **Faster guard** (~115 ms instead of ~220 ms): no git process per call.
+- Role files and the skill now point sessions to the brief and the tools. 10 new tests (58 in total).
+
 ## 0.3.0 — 2026-11-12
 
 - **A session signs only as itself.** The guard blocks writing another role's sign-off (by file or shell), signing with `--role` as someone else, `BOOTSTRAP_ROLE` spoofing and editing `session.json`. The CLI refuses the same.

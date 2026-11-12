@@ -25,20 +25,14 @@ CRITICAL: production data, credentials, irreversible migration, live users — n
 
 ## Operating rules
 
-- **O1 Evidence, or UNKNOWN.** "Done" only with command + output beside it; re-checked from the diff. *Helper sessions report confidently; several "fixed" claims were not.*
-- **O2 One gate.** Run before every push; paste its output. It loads every page as every role, fails on unguarded routes, runs the dependency audit and a secret scan. *A 500 on every phone page passed a gate that never loaded pages per role.*
-- **O3 Design before build** for anything a person looks at: today beside proposed, both themes, phone + desktop. *Builds from a sentence were rebuilt; builds from a drawing went in once.*
-- **O4 One key to live.** The owner's word, typed or relayed in full (7E). *A vague "yes" once nearly released unreviewed work.*
-- **O5 Tour the data read-only first.** Dated read-only copy for figures; invented-data copy for everything else. *The costly surprises were all data.*
-- **O6 Live commands reported first, logged after** with server time. No credentials on the command line.
-- **O7 Help text and pictures ship with the screen**; the gate checks them. *Docs written separately die in a month.*
-- **O8 A scripted walk after every batch**: every page, role, width, theme. *A dead Cancel button lived for weeks.*
-- **O9 Dated rules carry their date and reason.**
-- **O10 Sign-offs before any code push** (hotfix excepted), one file per role in `docs/signoffs/<piece>/` — checked by the pre-push hook. Docs-only and picture-only commits push at once. *Code reached dev before QA looked; held docs writes hid work.*
-- **O11 A push never follows a failed script**; no conflict markers (the hook checks).
-- **O12 Questions live on the board** with a recommendation; one question at a time to the owner.
-- **O13 Every scratch script names its database in the same command.** *Scratch writes once landed in the real database.*
-- **O14 Moving access from a role type to a permission tick is HIGH**; compare every live role old vs new.
+Every rule, with the failure that produced it, lives in `.bootstrap/flow/rules.json`. Each session reads only
+its own share: `bootstrap brief <role-id>` (sent as its first message). This file keeps the five that bind everyone:
+
+- **O1 Evidence, or UNKNOWN.** "Done" only with the command and its output (or file:line) beside it. *Several confident "fixed" claims were not.*
+- **S1 Sign only as yourself, with evidence.** A PASS without evidence does not count; the push check ignores it.
+- **M1 Messages point to files**: "see docs/research/R14.md @ abc123", never the content; name the sha, say "supersedes X".
+- **M2 Ask the tools, not the files**: `bootstrap next <piece>`, `bootstrap board --mine`, `mem find <topic>`.
+- **O12 Questions for the owner go on the board** with a recommendation, one at a time, in plain words.
 
 ## Roster (role id → display name → kit)
 
@@ -58,7 +52,7 @@ CRITICAL: production data, credentials, irreversible migration, live users — n
 | support (on demand) | | |
 | <project lanes> | | |
 
-Role briefs: `.bootstrap/roles/<id>.md` — the first message to each session is taken from there, unchanged.
+First message to each session: its role file `.bootstrap/roles/<id>.md` plus the output of `bootstrap brief <id>`, unchanged.
 Start order: Librarian, Release Ops, Hotfix (cloud), Tech Lead, Security, QA, Researcher, Design, Builder, then Platform/Support when due, then lanes.
 
 ## The owner's word (7E)
@@ -69,6 +63,6 @@ a complete sign-off row. Written to `docs/releases/` (`bootstrap release …`) b
 
 ## Every session, every task
 
-Start: this file, `docs/plans/BOARD.md`, the lessons your rows name (`mem find <topic>`); print your rows.
+Start: `bootstrap board --mine`, then `mem find <topic>` for the lessons your rows name. Read the whole board only if you are the Librarian.
 End: row updated, log entry pushed to `docs/memory/logs/<role-id>.md` (newest on top), one lesson or "no lesson".
 Messages between sessions name their sha and say "supersedes X" when they replace one.

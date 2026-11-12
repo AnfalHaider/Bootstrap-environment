@@ -19,7 +19,7 @@ const sh = (args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8' }).
 const write = (rel, text) => { mkdirSync(dirname(join(repo, rel)), { recursive: true }); writeFileSync(join(repo, rel), text); };
 const commit = (msg) => { sh(['add', '-A']); sh(['commit', '-q', '-m', msg]); return sh(['rev-parse', 'HEAD']); };
 const as = (role) => write('.bootstrap/session.json', JSON.stringify({ role }));
-const sign = (piece, role, sha) => write(`docs/signoffs/${piece}/${role}.md`, `---\npiece: ${piece}\nrole: ${role}\nsha: ${sha}\nverdict: PASS\n---\nok\n`);
+const sign = (piece, role, sha) => write(`docs/signoffs/${piece}/${role}.md`, `---\npiece: ${piece}\nrole: ${role}\nsha: ${sha}\nverdict: PASS\n---\nnpm test: 12 passed; checked src/app.js:1\n`);
 const lane = (piece, l) => write(`docs/signoffs/${piece}/_piece.md`, `---\npiece: ${piece}\nlane: ${l}\n---\n`);
 const word = (piece, w, extra = '') => write(`docs/signoffs/${piece}/_${w}.md`, `---\npiece: ${piece}\nword: ${w}\nowner_words: "yes"\nquestion: "Approve it?"\nsaid_at: 2026-11-12T10:00\nrelayed_by: none\n${extra}---\n`);
 const push = (local) => checkPush({ root: repo, policy: loadPolicy(repo), role: 'builder', localSha: local, remoteRef: 'refs/heads/dev', remoteSha: base });

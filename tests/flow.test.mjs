@@ -18,7 +18,7 @@ let repo;
 const sh = (args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8' }).trim();
 const write = (rel, text) => { mkdirSync(dirname(join(repo, rel)), { recursive: true }); writeFileSync(join(repo, rel), text); };
 const commit = (msg) => { sh(['add', '-A']); sh(['commit', '-q', '-m', msg]); return sh(['rev-parse', 'HEAD']); };
-const sign = (piece, role, sha) => write(`docs/signoffs/${piece}/${role}.md`, `---\npiece: ${piece}\nrole: ${role}\nsha: ${sha}\nverdict: PASS\n---\nok\n`);
+const sign = (piece, role, sha) => write(`docs/signoffs/${piece}/${role}.md`, `---\npiece: ${piece}\nrole: ${role}\nsha: ${sha}\nverdict: PASS\n---\nnpm test: 12 passed; checked src/app.js:1\n`);
 const onLane = (piece, lane) => write(`docs/signoffs/${piece}/_piece.md`, `---\npiece: ${piece}\nlane: ${lane}\n---\n`);
 const push = (local, remote, role = 'builder', branch = 'dev') =>
   checkPush({ root: repo, policy: loadPolicy(repo), role, localSha: local, remoteRef: `refs/heads/${branch}`, remoteSha: remote });

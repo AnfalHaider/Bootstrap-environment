@@ -17,6 +17,7 @@ import { pathToFileURL } from 'node:url';
 import { parseFrontmatter } from './lib/fm.mjs';
 import { currentRole, git, loadPolicy, matchesAny, repoRoot } from './lib/policy.mjs';
 import { laneOf, loadFlow, requiredFor, wordRecordProblems, wordsFor } from './lib/flow.mjs';
+import { hasEvidence } from './lib/ops.mjs';
 
 const ZERO = /^0+$/;
 
@@ -44,13 +45,16 @@ export function piecesAt(root, sha, policy) {
   for (const [piece, files] of byPiece) {
     const p = { piece, lane: null, extra: [], required: null, signed: {}, words: {} };
     for (const [name, f] of files) {
-      const { data } = parseFrontmatter(show(root, sha, f));
+      const { data, body } = parseFrontmatter(show(root, sha, f));
       if (!data) continue;
       if (name === '_required') { if (Array.isArray(data.roles)) { p.required = data.roles; p.extra = data.roles; } continue; }
       if (name === '_piece') { p.lane = data.lane || null; continue; }
       if (name === '_approve' || name === '_go') { p.words[name.slice(1)] = data; continue; }
       if (name.startsWith('_')) continue;
-      if (String(data.verdict || '').toUpperCase() === 'PASS' && data.sha) p.signed[data.role || name] = data.sha;
+      // A PASS counts only with evidence in the body (a command and its output, or file:line).
+      if (String(data.verdict || '').toUpperCase() === 'PASS' && data.sha) {
+        if (hasEvidence(body, policy)) p.signed[data.role || name] = data.sha; else (p.weak ||= []).push(data.role || name);
+      }
     }
     out.push(p);
   }
@@ -81,7 +85,7 @@ export function completeSignoffs(root, sha, policy, { flow = null, codeCommits =
       const covered = codeCommits.filter((c) => git(['merge-base', '--is-ancestor', c, S], root) !== null);
       const files = covered.flatMap((c) => (git(['diff-tree', '--no-commit-id', '--name-only', '-r', '-m', '--root', c], root) || '').split('\n').filter(Boolean));
       const required = requiredFor(flow, lane.id, files, p.extra);
-      const missing = required.filter((r) => !sameSha(p.signed[r], S));
+      const missing = required.filter((r) => !sameSha(p.signed[r], S)).map((r) => ((p.weak || []).includes(r) ? `${r} (PASS without evidence)` : r));
       const wordIssues = wordsFor(flow, lane.id, files).flatMap((w) => wordRecordProblems(p.words[w], w, flow).map((x) => `${w}: ${x}`));
       if (!missing.length && !wordIssues.length) { done.push({ piece: p.piece, sha: S, required }); why = ''; break; }
       why = `${p.piece} @ ${S.slice(0, 9)}: ${[missing.length ? `missing sign-off from ${missing.join(', ')}` : '', wordIssues.length ? `owner's word ${wordIssues.join('; ')}` : ''].filter(Boolean).join('; ')}`;

@@ -9,6 +9,11 @@
 //   bootstrap piece <piece> --lane <lane-id> [--title "..."]    put a piece of work on a lane of the flow
 //   bootstrap approve <piece> --word approve|go --words "..." --question "..." --said-at ... [--artifact <link>]
 //   bootstrap status                                             role, policy, hooksPath, flow, sign-offs at HEAD
+//   bootstrap brief <role>                                       the role's own rules + its part in the flow (send at start)
+//   bootstrap next <piece> [--files a,b]                         what the piece still needs and who acts next
+//   bootstrap board --mine | board archive [--keep 10]           only your rows · move old DONE rows out
+//   bootstrap piece <piece> --suggest [--files a,b]              suggest a lane and extra checks from changed files
+//   bootstrap cost                                               start cost per session and what is growing
 //   bootstrap flow [--open] [--port N]                           visual flow editor for this project (local only)
 //   bootstrap flow --company <dir> [--open]                      edit a company defaults folder
 //   bootstrap flow check                                         check the flow; exit 1 on errors (CI-friendly)
@@ -20,6 +25,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseFrontmatter } from './lib/fm.mjs';
 import { DEFAULT_POLICY, currentRole, git, globToRegex, loadPolicy, repoRoot } from './lib/policy.mjs';
 import { loadFlow } from './lib/flow.mjs';
+import { boardArchive, boardMine, brief, cost, next, suggest } from './lib/ops.mjs';
 import { completeSignoffs } from './prepush.mjs';
 import { runFlowUi } from './flow-ui.mjs';
 
@@ -68,7 +74,11 @@ function init(root, args) {
   copyTree(join(KIT, 'flow'), join(root, '.bootstrap', 'flow'), { overwrite: true });
   copyTree(join(KIT, 'ui'), join(root, '.bootstrap', 'ui'), { overwrite: true });
   copyTree(join(KIT, 'roles'), join(root, '.bootstrap', 'roles'));
-  writeOnce(join(root, '.bootstrap', 'flow.json'), JSON.stringify({ version: 1, preset: 'full' }, null, 2) + '\n');
+  // --size picks a starting preset so small projects are not buried in process: prototype → solo, small → small team, live → full.
+  const size = arg(args, 'size', 'live');
+  const preset = { prototype: 'solo', small: 'small', live: 'full' }[size];
+  if (!preset) { console.error('--size prototype|small|live'); process.exit(1); }
+  writeOnce(join(root, '.bootstrap', 'flow.json'), JSON.stringify({ version: 1, preset, size }, null, 2) + '\n');
   writeOnce(join(root, '.bootstrap', 'policy.json'),
     JSON.stringify({ version: 1, branches: { live, dev }, destructive_commands: [], deny_all: DEFAULT_POLICY.deny_all }, null, 2) + '\n');
   copyTree(join(KIT, 'templates', 'project'), root);
@@ -149,9 +159,11 @@ function signoff(root, piece, args) {
   const verdict = (arg(args, 'verdict', '') || '').toUpperCase();
   if (!['PASS', 'FAIL'].includes(verdict)) { console.error('--verdict PASS|FAIL is required'); process.exit(1); }
   if (r === 'unassigned') { console.error('no role: run `bootstrap role <id>` (or, as the owner outside a session, pass --role)'); process.exit(1); }
+  const evidence = arg(args, 'evidence-file') ? readFileSync(arg(args, 'evidence-file'), 'utf8').trim() : (arg(args, 'note', '') || '').trim();
+  if (verdict === 'PASS' && evidence.length < 20) { console.error('A PASS needs evidence: --note "<command and its output, or file:line>" (20+ characters) or --evidence-file <file>. Without it the push check ignores the sign-off.'); process.exit(1); }
   const p = join(root, 'docs', 'signoffs', piece, `${r}.md`);
   mkdirSync(dirname(p), { recursive: true });
-  writeFileSync(p, `---\npiece: ${piece}\nrole: ${r}\nsha: ${sha}\nverdict: ${verdict}\ndate: ${today()}\n---\n\n${arg(args, 'note', '') || '<evidence: command, output, file:line>'}\n`);
+  writeFileSync(p, `---\npiece: ${piece}\nrole: ${r}\nsha: ${sha}\nverdict: ${verdict}\ndate: ${today()}\n---\n\n${evidence || '<evidence: command, output, file:line>'}\n`);
   log('WRITE', `${p} (${verdict} @ ${sha.slice(0, 9)}) — commit it as a docs-only commit`);
 }
 
@@ -211,6 +223,7 @@ function status(root) {
 }
 
 function piece(root, id, args) {
+  if (args.includes('--suggest')) { const f = arg(args, 'files'); return console.log(suggest(root, id, f ? f.split(',').map((x) => x.trim()) : null)); }
   mustBe(root, ['chief-of-staff'], '`bootstrap piece`');
   const laneId = arg(args, 'lane', null);
   if (!laneId) { console.error('--lane <lane-id> is required: the Chief of Staff decides the lane for every piece.'); process.exit(1); }
@@ -271,6 +284,11 @@ function main() {
   else if (cmd === 'require' && args[1]) requireRoles(root, args[0], args.slice(1));
   else if (cmd === 'release' && args[0]) release(root, args[0], args.slice(1));
   else if (cmd === 'status') status(root);
+  else if (cmd === 'brief' && args[0]) process.stdout.write(brief(root, args[0]));
+  else if (cmd === 'next' && args[0]) { const f = arg(args, 'files'); console.log(next(root, args[0], f ? f.split(',').map((x) => x.trim()) : null)); }
+  else if (cmd === 'board' && args[0] === '--mine') console.log(boardMine(root));
+  else if (cmd === 'board' && args[0] === 'archive') console.log(boardArchive(root, Number(arg(args, 'keep', 10))));
+  else if (cmd === 'cost') console.log(cost(root));
   else { console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 15).map((l) => l.replace(/^\/\/ ?/, '')).join('\n')); process.exit(cmd ? 1 : 0); }
 }
 

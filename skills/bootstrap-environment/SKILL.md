@@ -4,7 +4,7 @@ description: Set up any project's agent environment and run it with a session fa
 license: MIT
 compatibility: Needs git and Node 18+ for the bundled tools. Full enforcement in Claude Code; adapters for Cursor, Codex, Copilot, Antigravity, Devin, Kiro, OpenCode, Cline, Aider and ChatGPT degrade as documented in references/adapters.md.
 metadata:
-  version: 0.3.0
+  version: 0.4.0
   repository: https://github.com/AnfalHaider/Bootstrap-environment
 ---
 
@@ -15,8 +15,8 @@ install the plugins that fit, prove each works, scaffold rules, records and memo
 family** — one owner, one Chief of Staff, named role sessions with fixed jobs, kits, lanes and limits
 that the tooling enforces, not just describes.
 
-Runs ONCE per project. **Detect; do not ask what you can determine.** Ask the owner only the boundary
-questions (Phase 0H), the session names (Phase 7B), and anything paid, elevated, account-creating or
+Runs ONCE per project. **Detect; do not ask what you can determine.** Ask the owner only the project's
+size (prototype / small / live: it picks the preset), the boundary questions (Phase 0H), the session names (Phase 7B), and anything paid, elevated, account-creating or
 HIGH/CRITICAL.
 
 **Already bootstrapped?** If `AGENTS.md`, `.bootstrap/policy.json` and `docs/memory/` exist and
@@ -43,6 +43,9 @@ cloned repo. After `init`, the same tools live in the project at `.bootstrap/bin
 | `… bootstrap.mjs flow [--open]` | visual flow editor (local only): lanes, sessions, gates, conditions, words, presets, company |
 | `… bootstrap.mjs flow check` · `flow sources [role]` | check the flow (exit 1 on error) · each session's preferred sources |
 | `… bootstrap.mjs company init <dir>` · `flow --company <dir>` | create / edit company defaults with locked floors |
+| `… bootstrap.mjs brief <role>` | that role's rules (in full, with reasons) + its part in the flow: the session's first message |
+| `… bootstrap.mjs next <piece>` · `board --mine` · `board archive` | what a piece still needs · only your rows · move old DONE rows out |
+| `… bootstrap.mjs piece <piece> --suggest` · `cost` | suggest a lane from changed files · start cost per session and what is growing |
 | `node .bootstrap/bin/mem.mjs index \| report \| find <topic> \| check` | memory CLI |
 | `bin/guard.mjs` | pre-tool hook: blocks what a role must never do (exit 2 + reason) |
 | `bin/prepush.mjs` via `.githooks/pre-push` | refuses unsigned code, live pushes without a record, conflict markers — in every tool |
@@ -103,7 +106,7 @@ Pick ONE per need. → `references/stack-and-plugins.md`
 settings backed up first. **5 — VERIFY**: a real LSP query, a real MCP call, a real browser action,
 every hook branch. Only what passed is enabled.
 
-**6 — SCAFFOLD.** `node bin/bootstrap.mjs init --live <branch> --dev <branch>` (add `--project-hooks`
+**6 — SCAFFOLD.** `node bin/bootstrap.mjs init --size <prototype|small|live> --live <branch> --dev <branch>` (add `--project-hooks`
 for Claude Code sessions without the plugin, e.g. cloud). Then: write the 0H answers into `AGENTS.md`
 and `.bootstrap/policy.json` (`destructive_commands`), absorb existing conventions (move, don't
 retype), and build the gate if none exists. → `references/scaffold-and-memory.md`,
@@ -112,8 +115,10 @@ retype), and build the gate if none exists. → `references/scaffold-and-memory.
 **7 — SESSION FAMILY.** Ask which preset fits (Full company / Small team / Solo / Custom) and whether a company defaults repo exists; then offer the visual editor (`bootstrap flow --open`) so the owner can shape lanes, gates and sessions and paste preferred sources. Run `bootstrap flow check` until it passes. Show the owner one table — role id · job in this project · proposed display
 name · kit — and get names confirmed, project lanes chosen, on-demand roles (Platform, Support)
 started only when due. Each writing session: its own worktree with REAL dependency folders, `bootstrap
-role <id>`, its own database copy on the one shared server. Start in order, each with its brief from
-`.bootstrap/roles/<id>.md` unchanged; each restates the rules before working. Relays, sign-offs,
+role <id>`, its own database copy on the one shared server. Start in order (permanent nested sessions where the tool supports them), each with its role file
+plus `bootstrap brief <id>` unchanged: only that role's rules, in full with reasons (~1k tokens instead of ~7k);
+each restates them before working. Sessions then ask the tools (`next`, `board --mine`) instead of re-reading files.
+Run `bootstrap cost` after starting the family and monthly; archive the board when it warns. Relays, sign-offs,
 batches, freezes and messaging rules → `references/session-family.md`. Other tools → `references/adapters.md`.
 
 **8 — SEED MEMORY.** Lessons from Phases 0–5 first, then mine every history store with an extractor

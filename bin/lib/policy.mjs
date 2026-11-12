@@ -1,7 +1,7 @@
 // Shared helpers: project root, policy, role, glob matching, git.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { join, relative, isAbsolute } from 'node:path';
+import { dirname, join, relative, isAbsolute, resolve } from 'node:path';
 import { parseFrontmatter } from './fm.mjs';
 
 export const DEFAULT_POLICY = {
@@ -33,7 +33,15 @@ export function git(args, cwd, opts = {}) {
 }
 
 export function repoRoot(cwd) {
-  return git(['rev-parse', '--show-toplevel'], cwd);
+  // Walk up to the folder holding .git (a directory, or a file in a worktree). Same answer as
+  // `git rev-parse --show-toplevel` without starting a git process on every hook call (~50 ms).
+  let dir = resolve(cwd || process.cwd());
+  for (;;) {
+    if (existsSync(join(dir, '.git'))) return dir;
+    const up = dirname(dir);
+    if (up === dir) return null;
+    dir = up;
+  }
 }
 
 export function loadPolicy(root) {

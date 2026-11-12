@@ -21,7 +21,7 @@ const sh = (args, cwd = repo) => execFileSync('git', args, { cwd, encoding: 'utf
 const write = (rel, text) => { mkdirSync(dirname(join(repo, rel)), { recursive: true }); writeFileSync(join(repo, rel), text); };
 const commit = (msg) => { sh(['add', '-A']); sh(['commit', '-q', '-m', msg]); return sh(['rev-parse', 'HEAD']); };
 const setRole = (role) => write('.bootstrap/session.json', JSON.stringify({ role }));
-const signoff = (piece, role, sha) => write(`docs/signoffs/${piece}/${role}.md`, `---\npiece: ${piece}\nrole: ${role}\nsha: ${sha}\nverdict: PASS\ndate: 2026-11-11\n---\nok\n`);
+const signoff = (piece, role, sha) => write(`docs/signoffs/${piece}/${role}.md`, `---\npiece: ${piece}\nrole: ${role}\nsha: ${sha}\nverdict: PASS\ndate: 2026-11-11\n---\nnpm test: 12 passed; checked src/app.js:1\n`);
 const push = (localSha, remoteSha, branch, role) =>
   checkPush({ root: repo, policy: loadPolicy(repo), role, localSha, remoteRef: `refs/heads/${branch}`, remoteSha });
 
