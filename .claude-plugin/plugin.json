@@ -1,6 +1,6 @@
 {
   "name": "bootstrap-environment",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Bootstrap any project for AI agents (stack-aware installs, plugin discovery, smoke tests, memory) and run it with an enforced session family: Chief of Staff plus role sessions whose limits are checked by a pre-tool guard and a git pre-push hook.",
   "author": { "name": "AnfalHaider", "url": "https://github.com/AnfalHaider" },
   "homepage": "https://github.com/AnfalHaider/Bootstrap-environment",

@@ -9,7 +9,7 @@ It ships as an [Agent Skill](https://agentskills.io) plus a dependency-free Node
 Claude Code plugin, with adapters for Cursor, Codex, GitHub Copilot, Antigravity, Devin Desktop, Kiro,
 OpenCode, Cline, Aider, Zed, Junie, Amp and ChatGPT.
 
-> Status: **0.1.0, early.** The enforcement scripts have a test suite (23 tests, real temporary git repos). The per-tool adapters follow vendor docs as of November 2026 and are not yet tested inside each tool — see [TODO.md](TODO.md).
+> Status: **0.2.0, early.** The enforcement scripts and the flow editor have a test suite (40 tests, real temporary git repos). The per-tool adapters follow vendor docs as of November 2026 and are not yet tested inside each tool — see [TODO.md](TODO.md).
 
 ## What it does
 
@@ -87,6 +87,44 @@ sequenceDiagram
   RO->>RO: release record → push live (hook checks record)
   CoS-->>Owner: verified live, row closed with sha
 ```
+
+## Define your own flow — visual editor
+
+Every team works differently, so the flow is **data the tooling obeys**, not code: lanes, stages, gates,
+conditions, your words and the sessions themselves live in `.bootstrap/flow.json`. Edit it visually:
+
+```bash
+node .bootstrap/bin/bootstrap.mjs flow --open
+```
+
+A local page opens (127.0.0.1 only, with a one-time access token). On it you can:
+
+- **Flow:** draw lanes (Normal, No screen, HIGH, Hotfix, or your own) as stages owned by sessions, plus the gates and the points where your word is needed. Add, remove and reorder them.
+- **Sessions:** edit each session's name, job, limits, model class, skills and plugins, add your own sessions (for example "Data Engineer"), and **paste GitHub links** to the plugins and skills you prefer for each one. They're searched first during plugin discovery, pinned to a commit, and trust-checked unless they're official.
+- **Gates & words:** choose which sessions must sign before code reaches dev in each lane; set conditions such as "touches auth → Security must sign"; decide whether each of your words may be relayed.
+- **Check:** problems are found as you edit, by the same code the pre-push hook runs. Save stays off while there's an error.
+- **Board:** each piece's lane and its missing sign-offs. **Presets:** Full company, Small team, Solo, Custom.
+
+Saving writes `.bootstrap/flow.json` and a readable `docs/flow.md` with a diagram for each lane. **What you draw is what's enforced:** the pre-push hook works out each piece's required sign-offs from its lane (`bootstrap piece R12 --lane high`) plus the conditions its files match. It judges a push by the flow **already on the remote**, so a commit can't loosen the rules to get itself through.
+
+### Company defaults
+
+Set rules once for every project. Create a company defaults folder (usually its own repo) and edit it with the same page:
+
+```bash
+node .bootstrap/bin/bootstrap.mjs company init ../agent-defaults --name "Acme"
+```
+
+```bash
+node .bootstrap/bin/bootstrap.mjs flow --company ../agent-defaults --open
+```
+
+A project inherits it by setting **Defaults live in** to `github:acme/agent-defaults@<sha>` (a reviewed copy is kept in `.bootstrap/company.json`) or a local path. Company settings are of two kinds:
+
+- **Defaults:** a project may change them (preset, lanes, approved sources).
+- **🔒 Locked floors:** a project may tighten them but never loosen them. Examples: "Tech Lead signs every code push", "Security signs HIGH work", "no relays of apply". The company can also list **blocked sources**, which are never installed even when someone pastes them.
+
+The editor's **Check for updates** button picks up new company versions.
 
 ## How the rules are enforced (defence in depth)
 
@@ -190,7 +228,9 @@ Details, sources and what degrades: [docs/compatibility.md](docs/compatibility.m
 
 ```
 skills/bootstrap-environment/   SKILL.md (Agent Skills format) + references/ opened per phase
-bin/                            guard, prepush, bootstrap, mem, detect-stack, adapt (Node ≥18, no deps)
+bin/                            guard, prepush, bootstrap, mem, detect-stack, adapt, flow-ui (Node ≥18, no deps)
+flow/defaults.json              built-in lanes, gates, conditions and words
+ui/flow-editor.html             the visual flow editor (served locally by `bootstrap flow`)
 roles/                          one brief per role — the single source for sessions and adapters
 templates/                      AGENTS.md, CLAUDE.md, board, register, memory, lesson template
 githooks/pre-push               installed into projects as .githooks/pre-push
@@ -198,7 +238,7 @@ hooks/hooks.json                Claude Code plugin hook → bin/guard.mjs
 .claude-plugin/                 Claude Code plugin + marketplace manifests
 plugin.json                     Agent Plugins layout manifest
 docs/                           compatibility matrix, playbook (HTML)
-tests/                          node --test tests/enforcement.test.mjs
+tests/                          npm test (enforcement + flow + editor server)
 ```
 
 ## Principles

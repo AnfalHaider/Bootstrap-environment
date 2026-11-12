@@ -19,6 +19,19 @@ Status key: **DONE** (built and tested here) · **BUILT** (written, not yet test
 | Agent Plugins root `plugin.json` | BUILT | minimal fields only; validate per tool |
 | Adapters: Cursor, Codex, Copilot, Antigravity, Devin, Kiro, OpenCode, Cline, Aider, Zed, Junie, Amp, ChatGPT | BUILT | `bin/adapt.mjs`; every adapter run twice in a temp repo (second run skips everything). Not tested inside each tool |
 
+## 0.2.0 — user-defined flow
+
+| Item | Status | Evidence / note |
+|---|---|---|
+| Flow as data: `flow/defaults.json` + `.bootstrap/flow.json` (lanes, stages, gates, conditions, words, sessions) | DONE | `bin/lib/flow.mjs`; 7 tests |
+| Presets: Full company, Small team, Solo, Custom | DONE | test "presets change lanes" |
+| Company defaults with locked floors, approved/required/blocked sources, `company init` | DONE | 3 tests incl. "cannot loosen a company floor" |
+| Pre-push obeys the flow: lane gate + file conditions + floor; judged by the flow already on the remote | DONE | 5 tests incl. "a push that loosens the flow is judged by the flow already accepted" |
+| Guard knows custom sessions from the flow | DONE | 1 test |
+| Visual editor (`bootstrap flow`): local only, token + host check, save refuses errors, writes `docs/flow.md` | DONE | 3 server tests; used end to end in a browser on a demo project (desktop + phone width) |
+| Per-session preferred GitHub sources (pasted), searched first in Phase 3 | DONE | `bootstrap flow sources`; editor classifies official / trust-check / blocked / invalid |
+| Company "Check for updates" from a GitHub repo | BUILT | uses GitHub's public API and raw files; not yet tried against a real company repo |
+
 ## NEXT — make it trustworthy outside Claude Code
 
 1. **Install from GitHub and prove it, per tool.** Claude Code first: `marketplace add` + `install` + run the skill on a sample repo. Then Cursor, Codex, Copilot, Antigravity and Devin.

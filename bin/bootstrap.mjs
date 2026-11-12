@@ -6,13 +6,21 @@
 //   bootstrap signoff <piece> --verdict PASS|FAIL [--sha S] [--role R] [--note "..."]
 //   bootstrap require <piece> <role> [<role>...]                 set which roles must sign a piece
 //   bootstrap release <scope> --shas a,b --words "..." --question "..." --said-at "..." --check <file> [--relayed-by chief-of-staff]
-//   bootstrap status                                             role, policy, hooksPath, sign-offs at HEAD
+//   bootstrap piece <piece> --lane <lane-id> [--title "..."]    put a piece of work on a lane of the flow
+//   bootstrap status                                             role, policy, hooksPath, flow, sign-offs at HEAD
+//   bootstrap flow [--open] [--port N]                           visual flow editor for this project (local only)
+//   bootstrap flow --company <dir> [--open]                      edit a company defaults folder
+//   bootstrap flow check                                         check the flow; exit 1 on errors (CI-friendly)
+//   bootstrap flow sources [role]                                each session's preferred sources (company + project)
+//   bootstrap company init <dir> [--name "Acme"]                 scaffold a company defaults folder (company.json)
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseFrontmatter } from './lib/fm.mjs';
 import { DEFAULT_POLICY, currentRole, git, globToRegex, loadPolicy, repoRoot } from './lib/policy.mjs';
+import { loadFlow } from './lib/flow.mjs';
 import { completeSignoffs } from './prepush.mjs';
+import { runFlowUi } from './flow-ui.mjs';
 
 const KIT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const today = () => new Date().toISOString().slice(0, 10);
@@ -56,7 +64,10 @@ function init(root, args) {
   const dev = arg(args, 'dev', DEFAULT_POLICY.branches.dev);
   // Toolkit code is refreshed on every init (it is ours); everything else is written once.
   copyTree(join(KIT, 'bin'), join(root, '.bootstrap', 'bin'), { overwrite: true });
+  copyTree(join(KIT, 'flow'), join(root, '.bootstrap', 'flow'), { overwrite: true });
+  copyTree(join(KIT, 'ui'), join(root, '.bootstrap', 'ui'), { overwrite: true });
   copyTree(join(KIT, 'roles'), join(root, '.bootstrap', 'roles'));
+  writeOnce(join(root, '.bootstrap', 'flow.json'), JSON.stringify({ version: 1, preset: 'full' }, null, 2) + '\n');
   writeOnce(join(root, '.bootstrap', 'policy.json'),
     JSON.stringify({ version: 1, branches: { live, dev }, destructive_commands: [], deny_all: DEFAULT_POLICY.deny_all }, null, 2) + '\n');
   copyTree(join(KIT, 'templates', 'project'), root);
@@ -158,23 +169,76 @@ function status(root) {
   console.log(`policy:      ${policy ? `live=${policy.branches.live} dev=${policy.branches.dev}` : 'NOT BOOTSTRAPPED'}`);
   console.log(`hooksPath:   ${git(['config', 'core.hooksPath'], root) || 'UNSET (pre-push checks will not run)'}`);
   if (policy) {
+    const hasFlow = existsSync(join(root, '.bootstrap', 'flow.json'));
+    const { flow, findings } = loadFlow(root);
+    console.log(`flow:        ${hasFlow ? `${flow.lanes.map((l) => l.id).join(', ')} (preset ${flow.preset})` : 'built-in defaults (no .bootstrap/flow.json)'}${flow.company ? ` · inherits ${flow.company.name}` : ''}`);
+    const errs = findings.filter((f) => f.level === 'error');
+    if (errs.length) console.log(`flow errors: ${errs.map((f) => f.msg).join(' | ')}`);
     const head = git(['rev-parse', 'HEAD'], root);
     const done = head ? completeSignoffs(root, head, policy) : [];
-    console.log(`signed off:  ${done.length ? done.map((d) => `${d.piece}@${d.sha.slice(0, 9)}`).join(', ') : 'nothing complete at HEAD'}`);
+    console.log(`signed off:  ${done.length ? done.map((d) => `${d.piece}@${d.sha.slice(0, 9)}`).join(', ') : 'nothing complete at HEAD (legacy count; the pre-push hook applies the flow per piece)'}`);
   }
+}
+
+function piece(root, id, args) {
+  const laneId = arg(args, 'lane', 'normal');
+  const { flow } = loadFlow(root);
+  if (!flow.lanes.some((l) => l.id === laneId)) { console.error(`no lane "${laneId}"; lanes: ${flow.lanes.map((l) => l.id).join(', ')}`); process.exit(1); }
+  const p = join(root, 'docs', 'signoffs', id, '_piece.md');
+  mkdirSync(dirname(p), { recursive: true });
+  writeFileSync(p, `---\npiece: ${id}\nlane: ${laneId}\ntitle: "${(arg(args, 'title', '') || '').replace(/"/g, "'")}"\nset_by: ${currentRole(root)}\ndate: ${today()}\n---\n`);
+  log('WRITE', `${p}: lane ${laneId} — commit it as a docs-only commit`);
+}
+
+function flowCmd(root, args) {
+  if (args[0] === 'check') {
+    const { findings } = loadFlow(root);
+    for (const f of findings) console.log(`${f.level.toUpperCase().padEnd(7)} ${f.msg}${f.fix ? `\n        fix: ${f.fix}` : ''}`);
+    const errs = findings.filter((f) => f.level === 'error').length;
+    console.log(errs ? `flow check FAILED (${errs})` : 'flow check OK');
+    process.exit(errs ? 1 : 0);
+  }
+  if (args[0] === 'sources') {
+    const { flow } = loadFlow(root);
+    for (const r of Object.values(flow.roles)) {
+      if (args[1] && r.id !== args[1]) continue;
+      const ok = (r.source_list || []).filter((s) => s.ok);
+      if (!ok.length && args[1] === undefined) continue;
+      console.log(`${r.id}:`);
+      for (const s of r.source_list || []) console.log(`  ${s.ok ? (s.required ? 'REQUIRED' : s.from === 'company' ? 'COMPANY ' : 'PREFER  ') : s.blocked ? 'BLOCKED ' : 'INVALID '} ${s.ok ? s.slug : s.line}${s.ok && !s.official ? '  (trust-check before install)' : ''}`);
+    }
+    return;
+  }
+  return runFlowUi(args);
+}
+
+function companyInit(dir, args) {
+  const p = join(resolve(dir), 'company.json');
+  writeOnce(p, JSON.stringify({
+    version: 1,
+    name: arg(args, 'name', 'Company'),
+    defaults: { preset: 'full', blocked_sources: [] },
+    floor: { signoffs: { '*': ['tech-lead'], high: ['security'] }, no_relay: [] },
+    sources: {},
+  }, null, 2) + '\n');
+  console.log(`Edit it with: bootstrap flow --company ${dir}\nProjects inherit it by setting "Defaults live in" to github:<owner>/<repo>@<sha> (or a path) in their flow editor.`);
 }
 
 function main() {
   const [cmd, ...args] = process.argv.slice(2);
+  if (cmd === 'company' && args[0] === 'init' && args[1]) return companyInit(args[1], args.slice(2));
+  if (cmd === 'flow' && args.includes('--company')) return runFlowUi(args);
   const root = repoRoot(process.cwd());
   if (!root) { console.error('not inside a git repository'); process.exit(1); }
   if (cmd === 'init') init(root, args);
+  else if (cmd === 'piece' && args[0]) piece(root, args[0], args.slice(1));
+  else if (cmd === 'flow') flowCmd(root, args);
   else if (cmd === 'role' && args[0]) role(root, args[0]);
   else if (cmd === 'signoff' && args[0]) signoff(root, args[0], args.slice(1));
   else if (cmd === 'require' && args[1]) requireRoles(root, args[0], args.slice(1));
   else if (cmd === 'release' && args[0]) release(root, args[0], args.slice(1));
   else if (cmd === 'status') status(root);
-  else { console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 10).map((l) => l.replace(/^\/\/ ?/, '')).join('\n')); process.exit(cmd ? 1 : 0); }
+  else { console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 15).map((l) => l.replace(/^\/\/ ?/, '')).join('\n')); process.exit(cmd ? 1 : 0); }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) main();

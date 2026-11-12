@@ -1,6 +1,6 @@
 {
   "name": "bootstrap-environment",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Bootstrap any project for AI agents and run it with an enforced session family (Agent Plugins layout: skills/ at the root).",
   "author": { "name": "AnfalHaider", "url": "https://github.com/AnfalHaider" },
   "homepage": "https://github.com/AnfalHaider/Bootstrap-environment",

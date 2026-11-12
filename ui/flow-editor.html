@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flow Editor</title>
+<style>
+:root{
+  --paper:#F7F6F2;--card:#fff;--ink:#1F1D1A;--ink2:#55514A;--ink3:#7A756C;--line:#DDD9D0;--line2:#C7C2B6;
+  --accent:#9A3B1E;--accent-soft:#F3E2DA;--ok:#2C6E49;--ok-soft:#E1F0E6;--warn:#8A5A00;--warn-soft:#FBEFD5;--bad:#A12C2C;--bad-soft:#F7E0E0;
+  --display:Georgia,"Times New Roman",serif;--text:"Segoe UI",system-ui,-apple-system,sans-serif;--mono:Consolas,"SF Mono",ui-monospace,monospace;
+  --r-core:#9A3B1E;--r-review:#2D4B7A;--r-docs:#5B6B3A;--r-ops:#6A4C93;--r-owner:#1F1D1A;--r-custom:#7A756C;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#121210;--card:#1B1B18;--ink:#ECE9E2;--ink2:#B8B3A8;--ink3:#8E897E;--line:#2C2B27;--line2:#3C3A34;--accent:#E07A52;--accent-soft:#3A2419;--ok:#6BC28E;--ok-soft:#16281D;--warn:#E8C778;--warn-soft:#2E2614;--bad:#F08A8A;--bad-soft:#341818;--r-core:#E07A52;--r-review:#8FB0E8;--r-docs:#A9BF7A;--r-ops:#B79BE0;--r-owner:#ECE9E2;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#121210;--card:#1B1B18;--ink:#ECE9E2;--ink2:#B8B3A8;--ink3:#8E897E;--line:#2C2B27;--line2:#3C3A34;--accent:#E07A52;--accent-soft:#3A2419;--ok:#6BC28E;--ok-soft:#16281D;--warn:#E8C778;--warn-soft:#2E2614;--bad:#F08A8A;--bad-soft:#341818;--r-core:#E07A52;--r-review:#8FB0E8;--r-docs:#A9BF7A;--r-ops:#B79BE0;--r-owner:#ECE9E2;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 var(--text)}
+button,input,select,textarea{font:inherit;color:inherit}
+header{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
+header h1{font:600 20px var(--display);margin:0}
+header .proj{font:12px var(--mono);color:var(--ink3);overflow-wrap:anywhere}
+header .sp{flex:1}
+.btn{border:1px solid var(--line2);background:var(--card);border-radius:8px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--ink3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.small{padding:3px 9px;font-size:12.5px}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+select,input[type=text],textarea{border:1px solid var(--line2);background:var(--card);border-radius:8px;padding:6px 9px;min-width:0;max-width:100%}
+textarea{width:100%;resize:vertical;font:12.5px/1.5 var(--mono)}
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:500;border:0}
+.b-ok{background:var(--ok-soft);color:var(--ok)}.b-warn{background:var(--warn-soft);color:var(--warn)}.b-bad{background:var(--bad-soft);color:var(--bad)}.b-mute{background:var(--line);color:var(--ink2)}
+button.badge{cursor:pointer}
+.shell{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:calc(100vh - 62px)}
+nav{border-right:1px solid var(--line);padding:12px 8px;display:flex;flex-direction:column;gap:2px;background:var(--card)}
+nav button{all:unset;cursor:pointer;padding:8px 12px;border-radius:8px;display:flex;justify-content:space-between;gap:8px;color:var(--ink2)}
+nav button[aria-selected=true]{background:var(--accent-soft);color:var(--ink);font-weight:600}
+nav button:focus-visible,.stage:focus-visible{outline:2px solid var(--accent)}
+main{padding:20px clamp(16px,3vw,32px) 60px;min-width:0}
+h2{font:600 22px var(--display);margin:0 0 4px}
+h3{margin:18px 0 8px;font-size:15px}
+.lead{color:var(--ink2);margin:0 0 16px;max-width:78ch}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{border:1px solid var(--line2);border-radius:999px;padding:4px 12px;background:var(--card);cursor:pointer;font-size:13px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.add{border-style:dashed;color:var(--ink3)}
+.lane{margin-top:14px;display:flex;overflow-x:auto;padding:4px 2px 14px;align-items:stretch}
+.stage{flex:0 0 190px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:5px;border-top:4px solid var(--rc,var(--line2));cursor:pointer;text-align:left}
+.stage[aria-current=true]{box-shadow:0 0 0 2px var(--accent)}
+.stage .who{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--rc,var(--ink3));flex:none}
+.stage .t{font-weight:600}
+.stage .p{font-size:12.5px;color:var(--ink2)}
+.stage.gate{border:2px dashed var(--accent);background:var(--accent-soft)}
+.stage.gate .who{color:var(--accent)}
+.stage.word{border:2px solid var(--r-owner);background:transparent}
+.arrow{flex:0 0 22px;display:flex;align-items:center;justify-content:center;color:var(--ink3)}
+.addstage{flex:0 0 110px;border:1px dashed var(--line2);border-radius:12px;color:var(--ink3);cursor:pointer;background:transparent}
+.tag{font-size:11.5px;border-radius:6px;padding:1px 6px;background:var(--line);color:var(--ink2)}
+.tag.cond{background:var(--warn-soft);color:var(--warn)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.split{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
+.rolelist{display:flex;flex-direction:column;gap:2px}
+.rolelist button.r{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px}
+.rolelist button.r[aria-selected=true]{background:var(--accent-soft);font-weight:600}
+.rolelist .cls{margin-left:auto;font:11px var(--mono);color:var(--ink3)}
+.form{display:grid;grid-template-columns:130px minmax(0,1fr);gap:10px 14px;align-items:start}
+.form>label{font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;padding-top:7px}
+.form .full{grid-column:1/-1}
+.kits{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.kit{display:inline-flex;align-items:center;gap:4px;font:12.5px var(--mono);border:1px solid var(--line2);border-radius:6px;padding:2px 4px 2px 8px;background:var(--paper)}
+.kit button{all:unset;cursor:pointer;color:var(--ink3);padding:0 4px}
+.src{display:grid;gap:4px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.src:first-child{border-top:0}
+.src code{font:12.5px var(--mono);overflow-wrap:anywhere}
+.src .why{color:var(--ink3);font-size:12px}
+.note{background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink2)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:11.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;font-weight:600;white-space:nowrap}
+td.c,th.c{text-align:center}
+tr:last-child td{border-bottom:0}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.find{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.find:first-child{border-top:0}
+.find .fix{font-size:12.5px;color:var(--ink3)}
+.sig{display:inline-block;width:20px;height:20px;border-radius:50%;line-height:20px;text-align:center;font-size:11px;font-weight:600}
+.s-ok{background:var(--ok-soft);color:var(--ok)}.s-no{background:var(--bad-soft);color:var(--bad)}.s-na{color:var(--ink3)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.preset{border:1px solid var(--line2);border-radius:12px;padding:12px 14px;background:var(--card);cursor:pointer;text-align:left}
+.preset[aria-pressed=true]{border:2px solid var(--accent);padding:11px 13px}
+.preset b{display:block;margin-bottom:2px}
+.preset span{color:var(--ink2);font-size:13px}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;max-width:min(92vw,640px);font-size:13px;z-index:10}
+.empty{color:var(--ink3);font-size:13px}
+footer{font-size:12.5px;color:var(--ink3);margin-top:22px}
+@media (max-width:760px){
+  .shell{grid-template-columns:1fr}
+  nav{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px}
+  nav button{white-space:nowrap}
+  .split,.form,.grid2{grid-template-columns:1fr}
+  .rolelist{flex-direction:row;overflow-x:auto}
+  .rolelist button.r{white-space:nowrap}
+  .form>label{padding-top:0}
+}
+</style>
+</head>
+<body>
+<header>
+  <div><h1 id="title">Flow editor</h1><div class="proj" id="proj">loading…</div></div>
+  <div class="sp"></div>
+  <span id="inherits"></span>
+  <span id="checkBadge" class="badge b-mute">checking…</span>
+  <button class="btn" id="themeBtn" aria-label="Toggle light or dark theme">◐</button>
+  <button class="btn primary" id="saveBtn" disabled>Save</button>
+</header>
+<div class="shell">
+  <nav role="tablist" aria-label="Sections" id="nav"></nav>
+  <main id="main"></main>
+</div>
+<div id="toast" class="toast" hidden></div>
+<script>
+const TOKEN = '__FLOW_TOKEN__';
+let S = null;                 // server state: {mode, project, company, flow, findings, presets, board}
+let tab = 'flow', lane = null, stageSel = null, roleSel = 'builder', dirty = false;
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const GROUP = { 'chief-of-staff': 'r-owner', librarian: 'r-docs', researcher: 'r-docs', design: 'r-docs', support: 'r-docs', builder: 'r-core', hotfix: 'r-ops', 'release-ops': 'r-ops', platform: 'r-ops', qa: 'r-review', 'tech-lead': 'r-review', security: 'r-review' };
+const grp = (id) => GROUP[id] || (S.flow.roles[id] && S.flow.roles[id].class === 'lane' ? 'r-core' : 'r-custom');
+const rname = (id) => (S.flow.roles[id] ? S.flow.roles[id].name : id);
+const isCompany = () => S.mode === 'company';
+
+async function api(path, body) {
+  const r = await fetch(path, { method: body ? 'POST' : 'GET', headers: { 'x-flow-token': TOKEN, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+  if (!r.ok) throw Object.assign(new Error(j.error || `HTTP ${r.status}`), { data: j });
+  return j;
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), 5000); }
+
+// The layer being edited: the project's flow.json, or company.json "defaults" in company mode.
+function L() { if (!isCompany()) return S.project; S.company.defaults ||= {}; return S.company.defaults; }
+function laneEdit(id) {
+  const l = L(); l.lanes ||= [];
+  let x = l.lanes.find((y) => y.id === id && !y.removed);
+  if (!x) { x = JSON.parse(JSON.stringify(S.flow.lanes.find((y) => y.id === id))); l.lanes = l.lanes.filter((y) => y.id !== id); l.lanes.push(x); }
+  return x;
+}
+function roleEdit(id) { const l = L(); l.roles ||= {}; return (l.roles[id] ||= {}); }
+
+let checkTimer = null;
+function changed(now = false) {
+  dirty = true;
+  clearTimeout(checkTimer);
+  const run = async () => {
+    try { const st = await api('/api/check', isCompany() ? { company: S.company } : { project: S.project }); Object.assign(S, { flow: st.flow, findings: st.findings, board: st.board }); render(); }
+    catch (e) { toast(`Check failed: ${e.message}`); }
+  };
+  if (now) run(); else checkTimer = setTimeout(run, 250);
+}
+
+// ---------------- views ----------------
+function stageCard(s, i) {
+  const cur = stageSel === i ? 'true' : 'false';
+  if (s.kind === 'gate') {
+    const l = S.flow.lanes.find((x) => x.id === lane);
+    const who = s.gate === 'dev' ? (l.live_exempt_signoffs ? 'exempt' : (l.dev_signoffs || []).map(rname).join(' · ') || 'nobody') : `record + "${l.live_word || '?'}"`;
+    return `<button class="stage gate" data-act="stage" data-i="${i}" aria-current="${cur}"><div class="who">Gate · ${esc(s.gate)}</div><div class="t">${esc(s.title)}</div><div class="p">${esc(who)}</div></button>`;
+  }
+  if (s.kind === 'word') return `<button class="stage word" data-act="stage" data-i="${i}" aria-current="${cur}"><div class="who">Owner's word</div><div class="t">${esc(s.title)}</div><div class="p">${esc(s.produces || '')}</div></button>`;
+  return `<button class="stage" style="--rc:var(--${grp(s.role)})" data-act="stage" data-i="${i}" aria-current="${cur}"><div class="who"><span class="dot"></span>${esc(rname(s.role))}</div><div class="t">${esc(s.title)}</div><div class="p">${esc(s.produces || '')}</div>${s.note ? `<div><span class="tag cond">${esc(s.note)}</span></div>` : ''}</button>`;
+}
+function stageEditor(l) {
+  const s = l.stages[stageSel]; if (!s) return '';
+  const roles = Object.values(S.flow.roles).map((r) => `<option value="${esc(r.id)}" ${r.id === s.role ? 'selected' : ''}>${esc(r.name)}</option>`).join('');
+  const words = Object.keys(S.flow.words).map((w) => `<option ${w === s.word ? 'selected' : ''}>${esc(w)}</option>`).join('');
+  return `<div class="panel" style="margin-top:4px"><div class="form">
+    <label for="st-kind">Kind</label><select id="st-kind" data-act="st" data-k="kind"><option value="stage" ${s.kind === 'stage' ? 'selected' : ''}>Stage (a session's work)</option><option value="word" ${s.kind === 'word' ? 'selected' : ''}>Owner's word</option><option value="gate" ${s.kind === 'gate' ? 'selected' : ''}>Gate (push)</option></select>
+    ${s.kind === 'stage' ? `<label for="st-role">Session</label><select id="st-role" data-act="st" data-k="role">${roles}</select>` : ''}
+    ${s.kind === 'word' ? `<label for="st-word">Word</label><select id="st-word" data-act="st" data-k="word">${words}</select>` : ''}
+    ${s.kind === 'gate' ? `<label for="st-gate">Gate</label><select id="st-gate" data-act="st" data-k="gate"><option value="dev" ${s.gate === 'dev' ? 'selected' : ''}>Push to dev</option><option value="live" ${s.gate === 'live' ? 'selected' : ''}>Push live</option></select>` : ''}
+    <label for="st-title">Title</label><input type="text" id="st-title" data-act="st" data-k="title" value="${esc(s.title)}">
+    <label for="st-produces">Produces</label><input type="text" id="st-produces" data-act="st" data-k="produces" value="${esc(s.produces || '')}">
+    <label for="st-note">Note</label><input type="text" id="st-note" data-act="st" data-k="note" value="${esc(s.note || '')}" placeholder="e.g. skip if no screen changed">
+    <div class="full row"><button class="btn small" data-act="mv" data-d="-1">← Move left</button><button class="btn small" data-act="mv" data-d="1">Move right →</button><button class="btn small danger" data-act="delstage">Remove stage</button></div>
+  </div></div>`;
+}
+const VIEWS = {
+  flow() {
+    if (!lane || !S.flow.lanes.some((l) => l.id === lane)) lane = S.flow.lanes[0] && S.flow.lanes[0].id;
+    const l = S.flow.lanes.find((x) => x.id === lane);
+    if (!l) return `<h2>Flow</h2><p class="lead">No lanes. Add one.</p><button class="chip add" data-act="addlane">+ Add lane</button>`;
+    return `<h2>Flow</h2><p class="lead">Each lane is the path a piece of work takes. Coloured boxes are stages owned by a session, dashed boxes are gates the pre-push hook enforces, and outlined boxes are where your word is needed. Click a box to edit it. What you draw here is what gets enforced.</p>
+    <div class="row">${S.flow.lanes.map((x) => `<button class="chip" aria-pressed="${x.id === lane}" data-act="lane" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join('')}<button class="chip add" data-act="addlane">+ Add lane</button></div>
+    <div class="panel" style="margin-top:12px"><div class="form">
+      <label for="ln-name">Lane name</label><input type="text" id="ln-name" data-act="ln" data-k="name" value="${esc(l.name)}">
+      <label for="ln-when">Used when</label><input type="text" id="ln-when" data-act="ln" data-k="when" value="${esc(l.when || '')}">
+      <label for="ln-word">Live word</label><select id="ln-word" data-act="ln" data-k="live_word"><option value="">— none —</option>${Object.keys(S.flow.words).map((w) => `<option ${w === l.live_word ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select>
+      <label>Lane id</label><div style="padding-top:6px"><code>${esc(l.id)}</code> <span class="empty">· put on a piece with <code>bootstrap piece &lt;id&gt; --lane ${esc(l.id)}</code></span> <button class="btn small danger" data-act="dellane">Remove lane</button></div>
+    </div></div>
+    <div class="lane">${l.stages.map((s, i) => stageCard(s, i) + (i < l.stages.length - 1 ? '<div class="arrow" aria-hidden="true">→</div>' : '')).join('')}<div class="arrow"></div><button class="addstage" data-act="addstage">+ Add stage</button></div>
+    ${stageSel !== null ? stageEditor(l) : ''}`;
+  },
+  sessions() {
+    if (!S.flow.roles[roleSel]) roleSel = Object.keys(S.flow.roles)[0];
+    const r = S.flow.roles[roleSel];
+    const own = ((L().roles || {})[roleSel] || {}).sources;
+    const srcText = (Array.isArray(own) ? own : (r.sources || [])).join('\n');
+    const list = (r.source_list || []).map((s) => `<div class="src"><div class="row" style="gap:6px"><span class="badge ${s.from === 'company' ? 'b-mute' : !s.ok ? 'b-bad' : s.official ? 'b-ok' : 'b-warn'}">${s.from === 'company' ? (s.required ? '🔒 Company, required' : 'Company default') : s.ok ? (s.official ? 'Official' : 'Trust check') : s.blocked ? '⛔ Blocked' : 'Invalid'}</span><span class="badge b-mute">${esc(s.kind)}</span></div><code>${esc(s.ok ? s.slug : s.line)}</code><div class="why">${esc(s.why || '')}</div></div>`).join('');
+    const kits = (k) => (r[k] || []).map((x) => `<span class="kit">${esc(x)}<button data-act="kitdel" data-k="${k}" data-v="${esc(x)}" aria-label="Remove ${esc(x)}">✕</button></span>`).join('') || '<span class="empty">none</span>';
+    return `<h2>Sessions</h2><p class="lead">Each session's job, limits and kit. Paste GitHub links to the plugins and skills you prefer for a session: bootstrap searches them first and uses them when they fit the stack. It still pins every one to a commit and trust-checks anything that isn't from an official source.</p>
+    <div class="split"><div class="panel rolelist" role="listbox" aria-label="Sessions">${Object.values(S.flow.roles).map((x) => `<button class="r" role="option" aria-selected="${x.id === roleSel}" data-act="role" data-id="${esc(x.id)}"><span class="dot" style="--rc:var(--${grp(x.id)})"></span>${esc(x.name)}<span class="cls">${esc(x.class || '')}</span></button>`).join('')}
+      <div class="row" style="margin-top:10px"><input type="text" id="newRole" placeholder="new-role-id" style="width:130px"><button class="btn small" data-act="addrole">+ Add</button></div></div>
+    <div class="panel"><div class="form">
+      <label for="f-name">Display name</label><input type="text" id="f-name" data-act="rf" data-k="name" value="${esc(r.name)}">
+      <label>Role id</label><div style="padding-top:6px"><code>${esc(r.id)}</code> <span class="empty">fixed: names the log and sign-off files</span></div>
+      <label for="f-job">Job</label><textarea id="f-job" data-act="rf" data-k="job" rows="3" style="font-family:var(--text)">${esc(r.job)}</textarea>
+      <label for="f-never">Never</label><textarea id="f-never" data-act="rf" data-k="never" rows="2" style="font-family:var(--text)">${esc(r.never)}</textarea>
+      <label for="f-model">Model class</label><select id="f-model" data-act="rf" data-k="model">${['strongest', 'strong', 'mid', 'mid or strong', 'cheap', 'cheapest'].map((m) => `<option ${m === r.model ? 'selected' : ''}>${m}</option>`).join('')}</select>
+      <label>Skills</label><div class="kits">${kits('skills')}<input type="text" id="add-skills" placeholder="skill name" style="width:140px"><button class="btn small" data-act="kitadd" data-k="skills">+ skill</button></div>
+      <label>Plugins</label><div class="kits">${kits('plugins')}<input type="text" id="add-plugins" placeholder="plugin or *-lsp" style="width:140px"><button class="btn small" data-act="kitadd" data-k="plugins">+ plugin</button></div>
+      <label for="f-src">Preferred sources</label>
+      <div><textarea id="f-src" data-act="src" rows="4" placeholder="One per line:&#10;https://github.com/owner/repo&#10;owner/repo&#10;https://github.com/owner/repo/tree/main/skills/name">${esc(srcText)}</textarea>
+        <div style="margin-top:8px">${list || '<div class="empty">No preferred sources. Bootstrap searches the marketplaces and GitHub on its own.</div>'}</div></div>
+      ${r.class === 'custom' ? '<div class="full"><button class="btn small danger" data-act="delrole">Remove this session</button></div>' : ''}
+    </div></div></div>`;
+  },
+  gates() {
+    const floor = S.flow.floor || { signoffs: {}, no_relay: [] };
+    const signers = [...new Set(['qa', 'design', 'tech-lead', 'security', 'librarian', 'chief-of-staff', ...S.flow.lanes.flatMap((l) => l.dev_signoffs || [])])].filter((r) => S.flow.roles[r]);
+    const own = (id) => ((L().lanes || []).find((x) => x.id === id) || null);
+    const cell = (l, r) => {
+      if (l.live_exempt_signoffs) return '<span class="s-na">—</span>';
+      const locked = (floor.signoffs['*'] || []).includes(r) || (floor.signoffs[l.id] || []).includes(r);
+      const mine = own(l.id);
+      if (locked && !isCompany()) {
+        const dropped = mine && mine.dev_signoffs && !mine.dev_signoffs.includes(r);
+        return dropped ? `<button class="badge b-bad" data-act="gate" data-l="${esc(l.id)}" data-r="${esc(r)}" title="Required by company defaults: click to restore">🔒 required</button>` : '<span class="badge b-mute" title="Required by company defaults">🔒 ✓</span>';
+      }
+      return `<input type="checkbox" data-act="gate" data-l="${esc(l.id)}" data-r="${esc(r)}" ${(l.dev_signoffs || []).includes(r) ? 'checked' : ''} aria-label="${esc(rname(r))} signs ${esc(l.name)}">`;
+    };
+    return `<h2>Gates &amp; words</h2><p class="lead">Which sessions must sign the exact commit before code can go to dev, per lane, and which of your words move work forward.</p>
+    <div class="tbl"><table><tr><th>Lane · push to dev</th>${signers.map((r) => `<th class="c">${esc(rname(r))}</th>`).join('')}</tr>
+    ${S.flow.lanes.map((l) => `<tr><td><b>${esc(l.name)}</b>${l.live_exempt_signoffs ? ' <span class="empty">exempt (live breakage)</span>' : ''}</td>${signers.map((r) => `<td class="c">${cell(l, r)}</td>`).join('')}</tr>`).join('')}</table></div>
+    ${S.flow.company ? `<p class="empty" style="margin:6px 0 0">🔒 = set by ${esc(S.flow.company.name)} defaults. A project can add sign-offs but can't remove these.</p>` : ''}
+    <h3>Conditions that add a sign-off</h3>
+    <div class="panel">${S.flow.conditions.map((c, i) => `<div class="form" style="padding:8px 0;border-top:${i ? '1px solid var(--line)' : '0'}">
+      <label for="c-l-${i}">If</label><input type="text" id="c-l-${i}" data-act="cond" data-i="${i}" data-k="label" value="${esc(c.label)}">
+      <label for="c-g-${i}">Files</label><input type="text" id="c-g-${i}" data-act="cond" data-i="${i}" data-k="globs" value="${esc((c.globs || []).join(', '))}">
+      <label for="c-r-${i}">Require</label><div class="row"><select id="c-r-${i}" data-act="cond" data-i="${i}" data-k="require">${Object.values(S.flow.roles).map((r) => `<option value="${esc(r.id)}" ${(c.require || [])[0] === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select><button class="btn small danger" data-act="delcond" data-i="${i}">Remove</button></div>
+    </div>`).join('')}<button class="chip add" style="margin-top:8px" data-act="addcond">+ Add condition</button></div>
+    <h3>Your words</h3>
+    <div class="tbl"><table><tr><th>Word</th><th>Meaning</th><th class="c">Relay allowed</th><th>A relay must carry</th></tr>
+    ${Object.entries(S.flow.words).map(([w, v]) => `<tr><td><b>${esc(w)}</b></td><td>${esc(v.label || '')}</td><td class="c">${(floor.no_relay || []).includes(w) && !isCompany() ? '<span class="badge b-mute">🔒 off</span>' : `<input type="checkbox" data-act="relay" data-w="${esc(w)}" ${v.relay ? 'checked' : ''} aria-label="Relay of ${esc(w)} allowed">`}</td><td>exact words + the question asked + date${['release', 'apply'].includes(w) ? ', shas, pasted check, sign-offs' : ''}</td></tr>`).join('')}</table></div>`;
+  },
+  check() {
+    const lvl = { error: 'b-bad', warning: 'b-warn', info: 'b-mute', ok: 'b-ok' };
+    const order = { error: 0, warning: 1, info: 2, ok: 3 };
+    const f = [...S.findings].sort((a, b) => order[a.level] - order[b.level]);
+    return `<h2>Check</h2><p class="lead">The flow is checked every time you change it, by the same code the pre-push hook uses. Save stays off while there's an error; warnings let you save.</p>
+    <div class="panel">${f.map((x) => `<div class="find"><span class="badge ${lvl[x.level]}">${esc(x.level)}</span><div>${esc(x.msg)}${x.fix ? `<div class="fix">Fix: ${esc(x.fix)}</div>` : ''}</div>${x.where ? `<button class="btn small" data-act="goto" data-where="${esc(x.where)}">Go to</button>` : '<span></span>'}</div>`).join('') || '<div class="empty">Nothing to report.</div>'}</div>`;
+  },
+  board() {
+    if (isCompany()) return '<h2>Board</h2><p class="lead">The board belongs to a project. Open the editor inside a project to see it.</p>';
+    const cols = [...new Set(S.board.flatMap((p) => [...p.required, ...Object.keys(p.signed)]))];
+    const s = (p, r) => p.signed[r] ? '<span class="sig s-ok" title="signed">✓</span>' : p.required.includes(r) ? '<span class="sig s-no" title="missing">·</span>' : '<span class="sig s-na">—</span>';
+    return `<h2>Board</h2><p class="lead">Read from <code>docs/signoffs/</code>: where each piece is and which sign-offs are still missing. Conditions that depend on the changed files (Security, Design…) are added at push time.</p>
+    ${S.board.length ? `<div class="tbl"><table><tr><th>Piece</th><th>Lane</th>${cols.map((c) => `<th class="c">${esc(rname(c))}</th>`).join('')}<th>Can push?</th></tr>
+    ${S.board.map((p) => `<tr><td><b>${esc(p.piece)}</b> ${esc(p.title)}</td><td>${esc((S.flow.lanes.find((l) => l.id === p.lane) || {}).name || p.lane)}</td>${cols.map((c) => `<td class="c">${s(p, c)}</td>`).join('')}<td>${p.missing.length ? `<span class="badge b-warn">waiting: ${esc(p.missing.map(rname).join(', '))}</span>` : '<span class="badge b-ok">gate met</span>'}</td></tr>`).join('')}</table></div>`
+      : '<div class="panel empty">No pieces yet. They appear when sessions run <code>bootstrap piece</code> and <code>bootstrap signoff</code>.</div>'}`;
+  },
+  presets() {
+    const cur = L().preset || S.flow.preset;
+    return `<h2>Presets</h2><p class="lead">A starting point. Choosing a preset replaces your lane edits (you're asked first). Session kits and preferred sources stay.</p>
+    <div class="grid2">${Object.entries(S.presets).map(([k, p]) => `<button class="preset" aria-pressed="${k === cur}" data-act="preset" data-id="${esc(k)}"><b>${esc(p.label)}</b><span>${esc(p.about)}</span></button>`).join('')}</div>`;
+  },
+  company() {
+    if (isCompany()) return companyEditor();
+    const c = S.flow.company, floor = S.flow.floor;
+    return `<h2>Company defaults</h2><p class="lead">Rules set once for every project. A project can change a default, but a 🔒 locked rule is a floor: a project can make it stricter, never looser.</p>
+    <div class="panel"><div class="form">
+      <label for="ext">Defaults live in</label><div><input type="text" id="ext" data-act="ext" style="width:100%" value="${esc(S.project.extends || '')}" placeholder="github:acme/agent-defaults@<sha>   or   ../agent-defaults/company.json">
+      <div class="empty" style="margin-top:4px">A company GitHub repo pinned to a commit (a reviewed copy is kept in <code>.bootstrap/company.json</code>), or a local file. Leave empty for none.</div>
+      <div class="row" style="margin-top:6px"><button class="btn small" data-act="updates">Check for updates</button><span id="upd"></span></div></div>
+      <label>Inherited from</label><div style="padding-top:6px">${c ? `<b>${esc(c.name)}</b> ${c.sha ? `@ <code>${esc(c.sha)}</code>` : ''}` : '<span class="empty">nothing yet</span>'}</div>
+    </div></div>
+    ${c ? `<h3>Locked minimum sign-offs</h3><div class="panel">${Object.entries(floor.signoffs).map(([k, v]) => `<div>${k === '*' ? 'Every code lane' : `Lane <b>${esc(k)}</b>`}: ${v.map((r) => `<span class="kit">🔒 ${esc(rname(r))}</span>`).join(' ')}</div>`).join('') || '<span class="empty">none</span>'}
+      ${floor.no_relay.length ? `<div style="margin-top:6px">Relays forbidden for: ${floor.no_relay.map((w) => `<b>${esc(w)}</b>`).join(', ')}</div>` : ''}</div>
+      <h3>Blocked sources</h3><div class="panel kits">${(S.flow.blocked_sources || []).map((b) => `<span class="kit">⛔ ${esc(b)}</span>`).join('') || '<span class="empty">none</span>'}</div>` : ''}
+    <div class="note" style="margin-top:14px">To edit the company defaults themselves, run <code>bootstrap flow --company &lt;folder&gt;</code> in your company defaults repo, then commit and push it.</div>`;
+  },
+};
+function companyEditor() {
+  const C = S.company; C.floor ||= {}; C.floor.signoffs ||= {}; C.floor.no_relay ||= []; C.sources ||= {}; C.defaults ||= {}; C.defaults.blocked_sources ||= [];
+  const star = C.floor.signoffs['*'] || [];
+  const roles = Object.values(S.flow.roles);
+  return `<h2>Company defaults</h2><p class="lead">You're editing <code>company.json</code> for every project that inherits it. Lanes, sessions and conditions you change in the other tabs become company <b>defaults</b>. What you lock here is a <b>floor</b> no project can loosen.</p>
+  <div class="panel"><div class="form"><label for="cname">Company</label><input type="text" id="cname" data-act="cname" value="${esc(C.name || '')}">
+    <label for="cpreset">Default preset</label><select id="cpreset" data-act="cpreset">${Object.entries(S.presets).map(([k, p]) => `<option value="${k}" ${k === (C.defaults.preset || 'full') ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}</select></div></div>
+  <h3>🔒 Must sign every code push (all lanes except exempt ones)</h3>
+  <div class="panel kits">${roles.map((r) => `<label class="kit" style="padding:4px 8px"><input type="checkbox" data-act="floor" data-r="${esc(r.id)}" ${star.includes(r.id) ? 'checked' : ''}> ${esc(r.name)}</label>`).join('')}</div>
+  <h3>🔒 Relays forbidden for</h3>
+  <div class="panel kits">${Object.keys(S.flow.words).map((w) => `<label class="kit" style="padding:4px 8px"><input type="checkbox" data-act="norelay" data-w="${esc(w)}" ${C.floor.no_relay.includes(w) ? 'checked' : ''}> ${esc(w)}</label>`).join('')}</div>
+  <h3>Approved sources per session</h3>
+  <div class="tbl"><table><tr><th>Session</th><th>Repo</th><th class="c">Required</th><th></th></tr>
+  ${Object.entries(C.sources).flatMap(([role, list]) => list.map((x, i) => `<tr><td>${esc(rname(role))}</td><td><code>${esc(x.repo)}</code></td><td class="c"><input type="checkbox" data-act="csrcreq" data-r="${esc(role)}" data-i="${i}" ${x.required ? 'checked' : ''} aria-label="required"></td><td><button class="btn small danger" data-act="csrcdel" data-r="${esc(role)}" data-i="${i}">Remove</button></td></tr>`)).join('') || '<tr><td colspan="4" class="empty">none</td></tr>'}</table></div>
+  <div class="row" style="margin-top:8px"><select id="csrc-role">${roles.map((r) => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select><input type="text" id="csrc-repo" placeholder="owner/repo or GitHub link"><button class="btn small" data-act="csrcadd">+ Add</button></div>
+  <h3>Blocked sources</h3>
+  <div class="panel kits">${C.defaults.blocked_sources.map((b) => `<span class="kit">⛔ ${esc(b)}<button data-act="blockdel" data-v="${esc(b)}" aria-label="Unblock ${esc(b)}">✕</button></span>`).join('')}<input type="text" id="block-repo" placeholder="owner/repo" style="width:160px"><button class="btn small" data-act="blockadd">+ Block</button></div>`;
+}
+
+// ---------------- render ----------------
+const TABS = [['flow', 'Flow'], ['sessions', 'Sessions'], ['gates', 'Gates & words'], ['check', 'Check'], ['board', 'Board'], ['presets', 'Presets'], ['company', 'Company']];
+function render() {
+  const a = document.activeElement, aid = a && a.id, sel = a && 'selectionStart' in a ? [a.selectionStart, a.selectionEnd] : null;
+  const errors = S.findings.filter((f) => f.level === 'error').length, warns = S.findings.filter((f) => f.level === 'warning').length;
+  $('#title').textContent = isCompany() ? 'Company defaults editor' : 'Flow editor';
+  $('#proj').textContent = `${String(S.root).split(/[\\/]/).filter(Boolean).pop()} · ${isCompany() ? 'company.json' : '.bootstrap/flow.json'}${dirty ? ' · unsaved changes' : ''}`;
+  $('#proj').title = S.root;
+  $('#inherits').innerHTML = !isCompany() && S.flow.company ? `<button class="badge b-mute" data-act="tab" data-id="company">🔒 Inherits: ${esc(S.flow.company.name)}${S.flow.company.sha ? ` @ ${esc(S.flow.company.sha)}` : ''}</button>` : '';
+  const b = $('#checkBadge');
+  b.className = `badge ${errors ? 'b-bad' : warns ? 'b-warn' : 'b-ok'}`;
+  b.textContent = errors ? `${errors} error${errors > 1 ? 's' : ''}${warns ? ` · ${warns} warning${warns > 1 ? 's' : ''}` : ''}` : warns ? `${warns} warning${warns > 1 ? 's' : ''}` : 'Flow OK';
+  $('#saveBtn').disabled = !!errors || !dirty;
+  $('#saveBtn').title = errors ? 'Fix the errors on the Check tab first' : dirty ? '' : 'No changes';
+  $('#nav').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-act="tab" data-id="${k}" aria-selected="${k === tab}">${n}${k === 'check' && (errors + warns) ? ` <span>${errors + warns}</span>` : ''}${k === 'flow' ? ` <span>${S.flow.lanes.length}</span>` : ''}${k === 'sessions' ? ` <span>${Object.keys(S.flow.roles).length}</span>` : ''}</button>`).join('');
+  $('#main').innerHTML = VIEWS[tab]() + `<footer>${isCompany() ? 'Saving writes company.json in the company folder. Commit and push it; projects take it with "Check for updates".' : 'Saving writes <code>.bootstrap/flow.json</code> (enforced by the guard and the pre-push hook once committed) and <code>docs/flow.md</code> (a readable copy with diagrams).'}</footer>`;
+  if (aid) { const el = document.getElementById(aid); if (el) { el.focus(); if (sel && 'setSelectionRange' in el) try { el.setSelectionRange(sel[0], sel[1]); } catch {} } }
+}
+
+// ---------------- events ----------------
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const act = t.dataset.act, l = lane && S.flow.lanes.find((x) => x.id === lane);
+  if (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA') { if (t.type !== 'checkbox') return; }
+  if (act === 'tab') { tab = t.dataset.id; stageSel = null; return render(); }
+  if (act === 'lane') { lane = t.dataset.id; stageSel = null; return render(); }
+  if (act === 'stage') { stageSel = stageSel === +t.dataset.i ? null : +t.dataset.i; return render(); }
+  if (act === 'role') { roleSel = t.dataset.id; return render(); }
+  if (act === 'goto') { const [tb, id] = t.dataset.where.split(':'); tab = tb; if (tb === 'flow' && id) lane = id; if (tb === 'sessions' && id) roleSel = id; return render(); }
+  if (act === 'mv') { const x = laneEdit(lane), i = stageSel, j = i + +t.dataset.d; if (j >= 0 && j < x.stages.length) { [x.stages[i], x.stages[j]] = [x.stages[j], x.stages[i]]; stageSel = j; changed(true); } return; }
+  if (act === 'delstage') { laneEdit(lane).stages.splice(stageSel, 1); stageSel = null; return changed(true); }
+  if (act === 'addstage') { const x = laneEdit(lane); x.stages.push({ kind: 'stage', role: 'builder', title: 'New stage', produces: '' }); stageSel = x.stages.length - 1; return changed(true); }
+  if (act === 'addlane') {
+    let n = 1; while (S.flow.lanes.some((x) => x.id === `lane-${n}`)) n++;
+    const lay = L(); lay.lanes ||= [];
+    lay.lanes.push({ id: `lane-${n}`, name: `New lane ${n}`, when: '', stages: [{ kind: 'stage', role: 'builder', title: 'Build', produces: 'Own branch' }, { kind: 'gate', gate: 'dev', title: 'Push to dev' }, { kind: 'word', word: 'release', title: '"release <scope>"' }, { kind: 'gate', gate: 'live', title: 'Push live' }], dev_signoffs: ['tech-lead', 'chief-of-staff'], live_word: 'release', live_exempt_signoffs: false });
+    lane = `lane-${n}`; stageSel = null; return changed(true);
+  }
+  if (act === 'dellane') { if (!confirm(`Remove the lane "${l.name}"? Pieces that name it fall back to Normal.`)) return; const lay = L(); lay.lanes = (lay.lanes || []).filter((x) => x.id !== lane); lay.lanes.push({ id: lane, removed: true }); lane = null; return changed(true); }
+  if (act === 'gate') { const x = laneEdit(t.dataset.l), r = t.dataset.r; x.dev_signoffs ||= []; x.dev_signoffs = x.dev_signoffs.includes(r) && t.type === 'checkbox' && !t.checked ? x.dev_signoffs.filter((y) => y !== r) : [...new Set([...x.dev_signoffs, r])]; return changed(true); }
+  if (act === 'relay') { const lay = L(); lay.words ||= {}; lay.words[t.dataset.w] = { ...(lay.words[t.dataset.w] || {}), relay: t.checked }; return changed(true); }
+  if (act === 'addcond') { const lay = L(); lay.conditions ||= []; let n = 1; while (S.flow.conditions.some((c) => c.id === `cond-${n}`)) n++; lay.conditions.push({ id: `cond-${n}`, label: 'New condition', globs: ['path/**'], require: ['tech-lead'] }); return changed(true); }
+  if (act === 'delcond') { const c = S.flow.conditions[+t.dataset.i]; const lay = L(); lay.conditions = (lay.conditions || []).filter((x) => x.id !== c.id); lay.conditions.push({ id: c.id, removed: true }); return changed(true); }
+  if (act === 'kitadd') { const k = t.dataset.k, v = $(`#add-${k}`).value.trim(); if (!v) return; const r = roleEdit(roleSel); r[k] = [...new Set([...(r[k] || S.flow.roles[roleSel][k] || []), v])]; return changed(true); }
+  if (act === 'kitdel') { const k = t.dataset.k, r = roleEdit(roleSel); r[k] = (r[k] || S.flow.roles[roleSel][k] || []).filter((x) => x !== t.dataset.v); return changed(true); }
+  if (act === 'addrole') { const id = $('#newRole').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, ''); if (!id || S.flow.roles[id]) return toast(id ? `"${id}" already exists` : 'Type an id like data-engineer'); Object.assign(roleEdit(id), { name: id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), class: 'custom', job: '', never: '', model: 'mid' }); roleSel = id; return changed(true); }
+  if (act === 'delrole') { if (!confirm(`Remove the session "${rname(roleSel)}"?`)) return; delete (L().roles || {})[roleSel]; roleSel = 'builder'; return changed(true); }
+  if (act === 'preset') { if ((L().lanes || []).length && !confirm('Switching preset replaces your lane edits. Continue?')) return; const lay = L(); lay.preset = t.dataset.id; delete lay.lanes; return changed(true); }
+  if (act === 'updates') {
+    try { const u = await api('/api/company/updates', { project: S.project }); $('#upd').innerHTML = u.upToDate ? '<span class="badge b-ok">up to date</span>' : `<span class="badge b-warn">newer: ${esc(u.latest.slice(0, 12))}</span> <button class="btn small" data-act="apply" data-sha="${esc(u.latest)}">Use it</button>`; }
+    catch (err) { $('#upd').innerHTML = `<span class="badge b-bad">${esc(err.message)}</span>`; }
+    return;
+  }
+  if (act === 'apply') { try { const st = await api('/api/company/apply', { project: S.project, sha: t.dataset.sha }); S = { ...S, ...st }; dirty = true; render(); toast(st.note); } catch (err) { toast(err.message); } return; }
+  if (act === 'floor') { const C = S.company, a = C.floor.signoffs['*'] || []; C.floor.signoffs['*'] = t.checked ? [...new Set([...a, t.dataset.r])] : a.filter((x) => x !== t.dataset.r); return changed(true); }
+  if (act === 'norelay') { const f = S.company.floor; f.no_relay = t.checked ? [...new Set([...f.no_relay, t.dataset.w])] : f.no_relay.filter((x) => x !== t.dataset.w); return changed(true); }
+  if (act === 'csrcadd') { const role = $('#csrc-role').value, repo = $('#csrc-repo').value.trim(); if (!repo) return; (S.company.sources[role] ||= []).push({ repo, required: false }); return changed(true); }
+  if (act === 'csrcreq') { S.company.sources[t.dataset.r][+t.dataset.i].required = t.checked; return changed(true); }
+  if (act === 'csrcdel') { S.company.sources[t.dataset.r].splice(+t.dataset.i, 1); if (!S.company.sources[t.dataset.r].length) delete S.company.sources[t.dataset.r]; return changed(true); }
+  if (act === 'blockadd') { const v = $('#block-repo').value.trim().replace(/^https?:\/\/github\.com\//, ''); if (!v) return; S.company.defaults.blocked_sources = [...new Set([...S.company.defaults.blocked_sources, v])]; return changed(true); }
+  if (act === 'blockdel') { S.company.defaults.blocked_sources = S.company.defaults.blocked_sources.filter((x) => x !== t.dataset.v); return changed(true); }
+});
+document.addEventListener('change', (e) => {
+  const t = e.target, act = t.dataset && t.dataset.act; if (!act) return;
+  if (act === 'st') { const s = laneEdit(lane).stages[stageSel]; s[t.dataset.k] = t.value; if (t.dataset.k === 'kind') { if (t.value === 'stage') s.role ||= 'builder'; if (t.value === 'word') s.word ||= 'release'; if (t.value === 'gate') s.gate ||= 'dev'; } return changed(true); }
+  if (act === 'ln') { laneEdit(lane)[t.dataset.k] = t.value; return changed(true); }
+  if (act === 'rf') { roleEdit(roleSel)[t.dataset.k] = t.value; return changed(true); }
+  if (act === 'cond') { const c = S.flow.conditions[+t.dataset.i], lay = L(); lay.conditions ||= []; let x = lay.conditions.find((y) => y.id === c.id); if (!x) { x = JSON.parse(JSON.stringify(c)); lay.conditions.push(x); } x[t.dataset.k] = t.dataset.k === 'globs' ? t.value.split(',').map((s) => s.trim()).filter(Boolean) : t.dataset.k === 'require' ? [t.value] : t.value; return changed(true); }
+  if (act === 'ext') { if (t.value.trim()) S.project.extends = t.value.trim(); else delete S.project.extends; return changed(true); }
+  if (act === 'cname') { S.company.name = t.value; return changed(true); }
+  if (act === 'cpreset') { S.company.defaults.preset = t.value; return changed(true); }
+});
+document.addEventListener('input', (e) => {
+  if (e.target.dataset && e.target.dataset.act === 'src') { roleEdit(roleSel).sources = e.target.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean); changed(); }
+});
+$('#saveBtn').addEventListener('click', async () => {
+  try { const r = await api('/api/save', isCompany() ? { company: S.company } : { project: S.project }); dirty = false; render(); toast(`Saved ${r.saved.join(' and ')}. ${r.note}`); }
+  catch (e) { toast(`Not saved: ${e.message}`); if (e.data && e.data.findings) { S.findings = e.data.findings; tab = 'check'; render(); } }
+});
+$('#themeBtn').addEventListener('click', () => { const r = document.documentElement; r.dataset.theme = (r.dataset.theme === 'dark' || (!r.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches)) ? 'light' : 'dark'; });
+window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+api('/api/state').then((st) => { S = st; if (S.mode === 'company') { S.company ||= { version: 1, name: 'Company' }; } render(); }).catch((e) => { $('#main').innerHTML = `<div class="panel"><b>Could not load:</b> ${esc(e.message)}. Open the exact link printed by <code>bootstrap flow</code>.</div>`; });
+</script>
+</body>
+</html>

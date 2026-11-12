@@ -9,8 +9,10 @@
 // Output: exit 0 = allow. Exit 2 + reason on stderr = block (Claude Code, Codex and
 // Copilot-style hooks all treat exit 2 as "deny and tell the agent why").
 // Not bootstrapped (no .bootstrap/policy.json) = always allow, silently.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { loadFlow } from './lib/flow.mjs';
 import { currentRole, git, loadPolicy, loadRole, matchesAny, repoRoot, toRepoPath } from './lib/policy.mjs';
 
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'write_file', 'replace', 'edit_file']);
@@ -46,7 +48,11 @@ export function decide({ tool, command = '', filePath = '', cwd = process.cwd() 
   const policy = loadPolicy(root);
   if (!policy) return { allow: true };
   const role = currentRole(root);
-  const brief = loadRole(root, role) || {};
+  // The merged flow role (brief + company + project overrides, incl. custom sessions) wins when a flow exists.
+  let brief = loadRole(root, role) || {};
+  if (existsSync(join(root, '.bootstrap', 'flow.json'))) {
+    try { const r = loadFlow(root).flow.roles[role]; if (r) brief = { ...brief, ...r, deny_commands: r.deny_commands || brief.deny_commands }; } catch { /* keep the brief */ }
+  }
 
   if (SHELL_TOOLS.has(tool)) {
     for (const pat of [...policy.deny_all, ...(policy.destructive_commands || []), ...(brief.deny_commands || [])]) {

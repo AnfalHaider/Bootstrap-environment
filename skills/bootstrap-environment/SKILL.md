@@ -4,7 +4,7 @@ description: Set up any project's agent environment and run it with a session fa
 license: MIT
 compatibility: Needs git and Node 18+ for the bundled tools. Full enforcement in Claude Code; adapters for Cursor, Codex, Copilot, Antigravity, Devin, Kiro, OpenCode, Cline, Aider and ChatGPT degrade as documented in references/adapters.md.
 metadata:
-  version: 0.1.0
+  version: 0.2.0
   repository: https://github.com/AnfalHaider/Bootstrap-environment
 ---
 
@@ -38,11 +38,15 @@ cloned repo. After `init`, the same tools live in the project at `.bootstrap/bin
 | `… bootstrap.mjs signoff <piece> --verdict PASS` | write `docs/signoffs/<piece>/<role>.md` with the sha |
 | `… bootstrap.mjs require <piece> <roles…>` | set which roles must sign a piece (e.g. add `security`) |
 | `… bootstrap.mjs release <scope> --shas … --words … --question … --said-at … --check <file>` | release record (7E) |
+| `… bootstrap.mjs piece <piece> --lane <lane>` | put a piece on a lane of the flow (decides its required sign-offs) |
+| `… bootstrap.mjs flow [--open]` | visual flow editor (local only): lanes, sessions, gates, conditions, words, presets, company |
+| `… bootstrap.mjs flow check` · `flow sources [role]` | check the flow (exit 1 on error) · each session's preferred sources |
+| `… bootstrap.mjs company init <dir>` · `flow --company <dir>` | create / edit company defaults with locked floors |
 | `node .bootstrap/bin/mem.mjs index \| report \| find <topic> \| check` | memory CLI |
 | `bin/guard.mjs` | pre-tool hook: blocks what a role must never do (exit 2 + reason) |
 | `bin/prepush.mjs` via `.githooks/pre-push` | refuses unsigned code, live pushes without a record, conflict markers — in every tool |
 
-Test the kit itself with `node --test tests/enforcement.test.mjs`.
+Test the kit itself with `npm test` (in the kit repo).
 
 ## Hard stops (automatic mode still stops here)
 
@@ -89,7 +93,7 @@ worktree and in the cloud hook. → `references/stack-and-plugins.md`
 **3 — PLUGIN DISCOVERY.** For each need (language server, framework, browser/E2E, design, security,
 docs lookup, services, workflow skills) search: installed → added marketplaces → the official
 marketplace → GitHub (`gh search repos`, `gh search code "filename:plugin.json"`, the framework's
-own org, a web search). Score: fits stack + version, licence, free (musts); official, maintained
+own org, a web search). **Run `bootstrap flow sources` first**: each session's preferred sources (company-required, company-approved, then the ones the owner pasted) are searched before anything else and win ties; blocked sources are never installed. Score: fits stack + version, licence, free (musts); official, maintained
 (high); adoption, context cost (medium); no duplicates. Trust-check anything non-official (hooks that
 call the network or run downloaded code, obfuscation, unpinned `npx`/`uvx` MCP servers → reject).
 Pick ONE per need. → `references/stack-and-plugins.md`
@@ -104,7 +108,7 @@ and `.bootstrap/policy.json` (`destructive_commands`), absorb existing conventio
 retype), and build the gate if none exists. → `references/scaffold-and-memory.md`,
 `references/operating-rules.md`
 
-**7 — SESSION FAMILY.** Show the owner one table — role id · job in this project · proposed display
+**7 — SESSION FAMILY.** Ask which preset fits (Full company / Small team / Solo / Custom) and whether a company defaults repo exists; then offer the visual editor (`bootstrap flow --open`) so the owner can shape lanes, gates and sessions and paste preferred sources. Run `bootstrap flow check` until it passes. Show the owner one table — role id · job in this project · proposed display
 name · kit — and get names confirmed, project lanes chosen, on-demand roles (Platform, Support)
 started only when due. Each writing session: its own worktree with REAL dependency folders, `bootstrap
 role <id>`, its own database copy on the one shared server. Start in order, each with its brief from
@@ -140,6 +144,7 @@ flight left alone · secrets found (location/type only) · gate result · ONE re
 - a capability boundary asserted without probing it
 - the boundary questions or the session names not confirmed by the owner
 - a session started without a role id, display name, brief, kit, worktree, or `bootstrap role`
+- `bootstrap flow check` failing, or a project flow that tries to loosen a company floor
 - the pre-push hook not installed (`git config core.hooksPath` ≠ `.githooks`), or a session approving its own work
 - Hotfix started locally, or a cloud move that left the local copy running
 
