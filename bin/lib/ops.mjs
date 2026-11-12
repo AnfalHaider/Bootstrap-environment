@@ -113,7 +113,10 @@ export function next(root, id, filesArg) {
   const lines = [`${id}${p.title ? ` · ${p.title}` : ''}`];
   if (!p.lane) return [...lines, `  NOT ROUTED: the Chief of Staff runs \`bootstrap piece ${id} --suggest\`, then \`--lane <lane>\`. Code without a lane is refused.`].join('\n');
   const files = filesArg || changedFiles(root, policy);
-  const required = requiredFor(flow, p.lane, files, p.extra);
+  // Natural order: the owner's word, then reviewers, then the Librarian, then the Chief of Staff's scope check last.
+  const ORDER = ['design', 'qa', 'tech-lead', 'security', 'librarian', 'chief-of-staff'];
+  const rank = (r) => (ORDER.includes(r) ? ORDER.indexOf(r) : 3.5);
+  const required = requiredFor(flow, p.lane, files, p.extra).sort((a, b) => rank(a) - rank(b));
   const words = wordsFor(flow, p.lane, files);
   const code = newestCode(root, policy);
   lines.push(`  lane: ${p.lane} · files changed: ${files.length} · newest code commit: ${code ? code.slice(0, 9) : 'none yet'}`);
@@ -126,7 +129,7 @@ export function next(root, id, filesArg) {
   }
   for (const w of words) {
     const probs = wordRecordProblems(p.words[w], w, flow);
-    if (probs.length) { lines.push(`  ✗ owner's "${w}": ${probs.join(', ')}`); todo.push(`Chief of Staff asks the owner for "${w}" and records it (\`bootstrap approve ${id} --word ${w} …\`)`); }
+    if (probs.length) { lines.push(`  ✗ owner's "${w}": ${probs.join(', ')}`); todo.unshift(`Chief of Staff asks the owner for "${w}" and records it (\`bootstrap approve ${id} --word ${w} …\`)`); }
     else lines.push(`  ✓ owner's "${w}" on record (${p.words[w].said_at})`);
   }
   lines.push(todo.length ? `  NEXT: ${todo[0]}` : '  READY: every sign-off and word is in; it can be pushed to dev.');
@@ -180,7 +183,7 @@ export function suggest(root, id, filesArg) {
   const hit = flow.conditions.filter((c) => files.some((f) => matchesAny(f, c.globs || [])));
   const has = (l) => flow.lanes.some((x) => x.id === l);
   let lane = has('normal') ? 'normal' : flow.lanes[0].id, why = 'default';
-  if (hit.some((c) => ['sensitive', 'migrations'].includes(c.id)) && has('high')) { lane = 'high'; why = `touches ${hit.filter((c) => ['sensitive', 'migrations'].includes(c.id)).map((c) => c.label.toLowerCase()).join(' and ')}`; }
+  if (hit.some((c) => ['sensitive', 'migrations'].includes(c.id)) && has('high')) { lane = 'high'; why = hit.filter((c) => ['sensitive', 'migrations'].includes(c.id)).map((c) => c.label.toLowerCase()).join('; '); }
   else if (!hit.some((c) => c.id === 'screens') && files.length && has('no-screen')) { lane = 'no-screen'; why = 'no screen files change'; }
   const required = requiredFor(flow, lane, files);
   const words = wordsFor(flow, lane, files);
