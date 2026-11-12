@@ -4,7 +4,7 @@ description: Set up any project's agent environment and run it with a session fa
 license: MIT
 compatibility: Needs git and Node 18+ for the bundled tools. Full enforcement in Claude Code; adapters for Cursor, Codex, Copilot, Antigravity, Devin, Kiro, OpenCode, Cline, Aider and ChatGPT degrade as documented in references/adapters.md.
 metadata:
-  version: 0.2.0
+  version: 0.3.0
   repository: https://github.com/AnfalHaider/Bootstrap-environment
 ---
 
@@ -38,7 +38,8 @@ cloned repo. After `init`, the same tools live in the project at `.bootstrap/bin
 | `… bootstrap.mjs signoff <piece> --verdict PASS` | write `docs/signoffs/<piece>/<role>.md` with the sha |
 | `… bootstrap.mjs require <piece> <roles…>` | set which roles must sign a piece (e.g. add `security`) |
 | `… bootstrap.mjs release <scope> --shas … --words … --question … --said-at … --check <file>` | release record (7E) |
-| `… bootstrap.mjs piece <piece> --lane <lane>` | put a piece on a lane of the flow (decides its required sign-offs) |
+| `… bootstrap.mjs piece <piece> --lane <lane>` | Chief of Staff only: route a piece to a lane (code with no routed piece is refused) |
+| `… bootstrap.mjs approve <piece> --word approve\|go --words … --question … --said-at … [--artifact <link>]` | Chief of Staff only: record the owner's approval of a design, or "go" for HIGH work |
 | `… bootstrap.mjs flow [--open]` | visual flow editor (local only): lanes, sessions, gates, conditions, words, presets, company |
 | `… bootstrap.mjs flow check` · `flow sources [role]` | check the flow (exit 1 on error) · each session's preferred sources |
 | `… bootstrap.mjs company init <dir>` · `flow --company <dir>` | create / edit company defaults with locked floors |
@@ -144,6 +145,7 @@ flight left alone · secrets found (location/type only) · gate result · ONE re
 - a capability boundary asserted without probing it
 - the boundary questions or the session names not confirmed by the owner
 - a session started without a role id, display name, brief, kit, worktree, or `bootstrap role`
+- a session signing as another role, or anyone but the Chief of Staff routing pieces or recording the owner's words
 - `bootstrap flow check` failing, or a project flow that tries to loosen a company floor
 - the pre-push hook not installed (`git config core.hooksPath` ≠ `.githooks`), or a session approving its own work
 - Hotfix started locally, or a cloud move that left the local copy running

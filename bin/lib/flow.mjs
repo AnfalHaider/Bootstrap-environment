@@ -190,6 +190,25 @@ export function requiredFor(flow, laneId, files = [], extra = []) {
   return uniq([...(lane.dev_signoffs || []), ...byCond, ...extra]).sort();
 }
 
+// Owner's words a piece needs on record before its code may reach dev (e.g. "approve" for a screen
+// change, "go" for HIGH work): from the lane and from every condition its files match.
+export function wordsFor(flow, laneId, files = []) {
+  const lane = laneOf(flow, laneId);
+  if (!lane || lane.live_exempt_signoffs) return [];
+  const byCond = flow.conditions.filter((c) => c.require_word && files.some((f) => matchesAny(f, c.globs || []))).map((c) => c.require_word);
+  return uniq([lane.require_word, ...byCond]).sort();
+}
+
+export function wordRecordProblems(rec, word, flow) {
+  if (!rec) return [`no _${word}.md record`];
+  const p = [];
+  for (const k of ['owner_words', 'question', 'said_at']) if (!rec[k]) p.push(k);
+  if (word === 'approve' && !rec.artifact) p.push('artifact');
+  const relayed = rec.relayed_by && !/^none/.test(String(rec.relayed_by));
+  if (relayed && flow.words[word] && flow.words[word].relay === false) p.push(`relay not allowed for "${word}"`);
+  return p;
+}
+
 // ---------- checks shown in the editor and by `bootstrap flow check` ----------
 export function validate(layers, flow) {
   const out = [];

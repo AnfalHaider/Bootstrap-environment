@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-11-12
+
+- **A session signs only as itself.** The guard blocks writing another role's sign-off (by file or shell), signing with `--role` as someone else, `BOOTSTRAP_ROLE` spoofing and editing `session.json`. The CLI refuses the same.
+- **Only the Chief of Staff routes work.** `bootstrap piece` (lane) and the new `bootstrap approve` (the owner's approve/go) are Chief-of-Staff-only. Release records are limited to Release Ops, Hotfix and the Chief of Staff.
+- **Code must be routed.** The pre-push hook refuses code unless its piece has an explicit lane, and says per piece what's missing.
+- **Your approval is enforced.** Screen changes need Design's sign-off plus your recorded approval with the artifact link; HIGH work needs your recorded "go"; relays follow the flow's settings. Both are configurable per lane and per file condition in the editor.
+- **Beginner-friendly editor:** welcome card, plain-language intros and examples, a hint on every field, a Help glossary, and friendly check labels.
+- 8 new tests (48 in total).
+
 ## 0.2.0 — 2026-11-12
 
 - **User-defined flow.** Lanes, stages, gates, conditions, words and sessions are data in `.bootstrap/flow.json`, with presets (Full company, Small team, Solo, Custom).

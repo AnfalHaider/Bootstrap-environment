@@ -32,6 +32,17 @@ Status key: **DONE** (built and tested here) · **BUILT** (written, not yet test
 | Per-session preferred GitHub sources (pasted), searched first in Phase 3 | DONE | `bootstrap flow sources`; editor classifies official / trust-check / blocked / invalid |
 | Company "Check for updates" from a GitHub repo | BUILT | uses GitHub's public API and raw files; not yet tried against a real company repo |
 
+## 0.3.0 — who checks what, beginner-friendly editor
+
+| Item | Status | Evidence / note |
+|---|---|---|
+| A session signs only as itself (file writes, shell writes, `--role`, `BOOTSTRAP_ROLE`, session.json tampering) | DONE | `tests/trust.test.mjs`: 4 tests |
+| Only the Chief of Staff routes pieces and records the owner's approve/go; release records only Release Ops / Hotfix / CoS | DONE | same |
+| Code needs a routed piece (explicit lane); unknown lanes refused; the refusal says why per piece | DONE | test "no lane set → refused" |
+| Screen changes need Design + the owner's recorded approval with the artifact link; HIGH needs a recorded "go"; relays honour the flow | DONE | 3 tests |
+| Editor: welcome card, plain-language intros, field hints, Help glossary, friendly check labels, approval switches | DONE | checked in a browser at desktop and phone width |
+| Separate identity per role (signed commits or bot accounts) + server-side checks | NEXT | the only way to make sign-offs unforgeable by someone working outside the AI tools |
+
 ## NEXT — make it trustworthy outside Claude Code
 
 1. **Install from GitHub and prove it, per tool.** Claude Code first: `marketplace add` + `install` + run the skill on a sample repo. Then Cursor, Codex, Copilot, Antigravity and Devin.

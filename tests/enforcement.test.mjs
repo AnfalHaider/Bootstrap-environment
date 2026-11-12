@@ -116,6 +116,7 @@ describe('pre-push (git hook)', () => {
   });
   test('partial sign-off still refused; complete sign-off + docs on top accepted', () => {
     const code = sh(['rev-parse', 'HEAD']);
+    write('docs/signoffs/R1/_piece.md', '---\npiece: R1\nlane: normal\n---\n'); // the Chief of Staff sets the lane
     signoff('R1', 'qa', code);
     let tip = commit('docs: qa signoff');
     assert.match(push(tip, base, 'dev', 'builder')[0], /no complete sign-off/);

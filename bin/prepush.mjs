@@ -16,7 +16,7 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { parseFrontmatter } from './lib/fm.mjs';
 import { currentRole, git, loadPolicy, matchesAny, repoRoot } from './lib/policy.mjs';
-import { laneOf, loadFlow, requiredFor } from './lib/flow.mjs';
+import { laneOf, loadFlow, requiredFor, wordRecordProblems, wordsFor } from './lib/flow.mjs';
 
 const ZERO = /^0+$/;
 
@@ -42,12 +42,14 @@ export function piecesAt(root, sha, policy) {
   }
   const out = [];
   for (const [piece, files] of byPiece) {
-    const p = { piece, lane: null, extra: [], required: null, signed: {} };
+    const p = { piece, lane: null, extra: [], required: null, signed: {}, words: {} };
     for (const [name, f] of files) {
       const { data } = parseFrontmatter(show(root, sha, f));
       if (!data) continue;
       if (name === '_required') { if (Array.isArray(data.roles)) { p.required = data.roles; p.extra = data.roles; } continue; }
       if (name === '_piece') { p.lane = data.lane || null; continue; }
+      if (name === '_approve' || name === '_go') { p.words[name.slice(1)] = data; continue; }
+      if (name.startsWith('_')) continue;
       if (String(data.verdict || '').toUpperCase() === 'PASS' && data.sha) p.signed[data.role || name] = data.sha;
     }
     out.push(p);
@@ -55,11 +57,13 @@ export function piecesAt(root, sha, policy) {
   return out;
 }
 
-export function completeSignoffs(root, sha, policy, { flow = null, codeCommits = [], role = '' } = {}) {
+export function completeSignoffs(root, sha, policy, { flow = null, codeCommits = [], role = '', notes = [] } = {}) {
   // Returns [{piece, sha}] for every piece whose required roles all signed PASS on one sha.
   // Without a flow: the required roles are _required.md or the policy default (legacy).
-  // With a flow: lane gate + conditions matched by the files the piece changed + _required.md (add-only)
-  //   + company floor. Only Hotfix may use an exempt lane.
+  // With a flow: the piece must have a lane set by the Chief of Staff (_piece.md); then lane gate +
+  //   conditions matched by the files the piece changed + _required.md (add-only) + company floor, and
+  //   the owner's words the lane/conditions need (_approve.md, _go.md). Only Hotfix may use an exempt lane.
+  //   `notes` collects why each piece did not count, for the error message.
   const done = [];
   for (const p of piecesAt(root, sha, policy)) {
     if (!flow) {
@@ -68,14 +72,21 @@ export function completeSignoffs(root, sha, policy, { flow = null, codeCommits =
       if (shas.every(Boolean) && shas.every((s) => sameSha(s, shas[0]))) done.push({ piece: p.piece, sha: shas[0] });
       continue;
     }
-    let lane = laneOf(flow, p.lane);
-    if (lane && lane.live_exempt_signoffs && role !== 'hotfix') lane = laneOf(flow, 'normal');
+    if (!p.lane) { notes.push(`${p.piece}: no lane set (the Chief of Staff runs \`bootstrap piece ${p.piece} --lane <lane>\`)`); continue; }
+    let lane = flow.lanes.find((l) => l.id === p.lane);
+    if (!lane) { notes.push(`${p.piece}: lane "${p.lane}" is not in the flow`); continue; }
+    if (lane.live_exempt_signoffs && role !== 'hotfix') lane = laneOf(flow, 'normal');
+    let why = '';
     for (const S of [...new Set(Object.values(p.signed))]) {
       const covered = codeCommits.filter((c) => git(['merge-base', '--is-ancestor', c, S], root) !== null);
       const files = covered.flatMap((c) => (git(['diff-tree', '--no-commit-id', '--name-only', '-r', '-m', '--root', c], root) || '').split('\n').filter(Boolean));
-      const required = requiredFor(flow, lane ? lane.id : null, files, p.extra);
-      if (required.every((r) => sameSha(p.signed[r], S))) { done.push({ piece: p.piece, sha: S, required }); break; }
+      const required = requiredFor(flow, lane.id, files, p.extra);
+      const missing = required.filter((r) => !sameSha(p.signed[r], S));
+      const wordIssues = wordsFor(flow, lane.id, files).flatMap((w) => wordRecordProblems(p.words[w], w, flow).map((x) => `${w}: ${x}`));
+      if (!missing.length && !wordIssues.length) { done.push({ piece: p.piece, sha: S, required }); why = ''; break; }
+      why = `${p.piece} @ ${S.slice(0, 9)}: ${[missing.length ? `missing sign-off from ${missing.join(', ')}` : '', wordIssues.length ? `owner's word ${wordIssues.join('; ')}` : ''].filter(Boolean).join('; ')}`;
     }
+    if (why) notes.push(why);
   }
   return done;
 }
@@ -150,14 +161,15 @@ export function checkPush({ root, policy, role, localSha, remoteRef, remoteSha }
   const exempt = branch === policy.branches.live && policy.releases.exempt_from_signoffs.includes(role);
   if (codeCommits.length && !exempt) {
     const flow = flowFor(root, ZERO.test(remoteSha) ? null : remoteSha, localSha);
-    const signed = completeSignoffs(root, localSha, policy, { flow, codeCommits, role });
+    const notes = [];
+    const signed = completeSignoffs(root, localSha, policy, { flow, codeCommits, role, notes });
     const unsigned = codeCommits.filter((c) =>
       !signed.some((s) => git(['merge-base', '--is-ancestor', c, s.sha], root) !== null));
     if (unsigned.length) {
-      const need = flow ? "the piece's lane gate in .bootstrap/flow.json, plus any conditions its files match"
+      const need = flow ? "a piece with a lane set by the Chief of Staff, its lane's sign-offs plus any its files' conditions add, and any owner's word they need"
         : `${policy.signoffs.default_required.join(', ')} or the piece's _required.md`;
       errors.push(`${unsigned.length} code commit(s) have no complete sign-off: ${unsigned.map((c) => c.slice(0, 9)).join(', ')} ` +
-        `(need PASS from ${need}, all on one sha — O10, 7F). See: bootstrap status`);
+        `(need ${need}, all on one sha — O10, 7F)${notes.length ? `. Pieces: ${notes.join(' | ')}` : '. No piece covers them yet'}`);
     }
   }
   return errors;

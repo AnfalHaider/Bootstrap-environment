@@ -9,7 +9,7 @@ It ships as an [Agent Skill](https://agentskills.io) plus a dependency-free Node
 Claude Code plugin, with adapters for Cursor, Codex, GitHub Copilot, Antigravity, Devin Desktop, Kiro,
 OpenCode, Cline, Aider, Zed, Junie, Amp and ChatGPT.
 
-> Status: **0.2.0, early.** The enforcement scripts and the flow editor have a test suite (40 tests, real temporary git repos). The per-tool adapters follow vendor docs as of November 2026 and are not yet tested inside each tool — see [TODO.md](TODO.md).
+> Status: **0.3.0, early.** The enforcement scripts and the flow editor have a test suite (48 tests, real temporary git repos). The per-tool adapters follow vendor docs as of November 2026 and are not yet tested inside each tool — see [TODO.md](TODO.md).
 
 ## What it does
 
@@ -21,6 +21,39 @@ OpenCode, Cline, Aider, Zed, Junie, Amp and ChatGPT.
 2. **Session family (every day).** The owner talks to one session. Work moves through a fixed lane with
    sign-offs. Nothing reaches the shared branch until the right roles have signed the exact commit, and
    nothing reaches live without the owner's word recorded with its question, scope and a pasted check.
+
+## In plain words
+
+You talk to **one** assistant, the Chief of Staff. Behind it is a small team of assistants, each with one job:
+Design draws screens, Builder writes code, QA tests, Tech Lead reviews code, Security checks the risky parts,
+Release Ops puts finished work live. Before code can join the shared work, **the right team members must
+approve that exact version**. A screen change also needs **your** approval of the design, and nothing goes live
+without your word. These checks are run by the tools, not left to the assistants' good behaviour: if one is
+missing, the code is refused and the assistant is told exactly what is missing.
+
+New to this? Open the visual editor (below). Every term on it has a plain-language explanation one click away.
+
+## Who checks what (and what is not checked)
+
+| When… | Who must approve, on that exact version | Enforced by |
+|---|---|---|
+| Any code joins the dev branch | the sessions its lane requires (Normal: QA, Tech Lead, Librarian, Chief of Staff) | pre-push hook |
+| The code touches login, payments, uploads, secrets | + Security | pre-push hook (file conditions) |
+| The code changes a screen | + Design, **and your recorded approval of the design** (with a link to it) | pre-push hook |
+| The work is HIGH risk (schema, money, permissions…) | + Security, **and your recorded "go"** before it can land | pre-push hook |
+| Anything goes live | Release Ops (or Hotfix), **your "release"/"apply"** with the question you answered, the shas and a pasted check | pre-push hook |
+| Code is not on a lane yet | refused: the Chief of Staff must route every piece (`bootstrap piece R12 --lane normal`) | pre-push hook |
+
+Who may write each record:
+- A session can sign **only as itself**.
+- Only the Chief of Staff can route a piece or record your approval or "go".
+- Only Release Ops, Hotfix or the Chief of Staff can write a release record.
+
+The guard blocks other sessions from writing these, by file or by command, and the `bootstrap` command refuses too.
+
+**Not checked by the tools:** conversations, plans and research (nothing is pushed), commands run outside git, and docs-only commits (deliberately free).
+
+**Honest limit:** all sessions on one machine share one git identity. A determined person can still edit files outside the AI tools. Server-side checks with a separate identity per role are on the [TODO](TODO.md).
 
 ## How information flows
 
@@ -97,12 +130,13 @@ conditions, your words and the sessions themselves live in `.bootstrap/flow.json
 node .bootstrap/bin/bootstrap.mjs flow --open
 ```
 
-A local page opens (127.0.0.1 only, with a one-time access token). On it you can:
+A local page opens (127.0.0.1 only, with a one-time access token). It's written for beginners: a welcome card walks you through the three steps, every tab starts with a short "what is this" and an example, every field has a hint, and every term (lane, gate, sign-off, relay…) opens a plain-language **Help** panel. On it you can:
 
 - **Flow:** draw lanes (Normal, No screen, HIGH, Hotfix, or your own) as stages owned by sessions, plus the gates and the points where your word is needed. Add, remove and reorder them.
 - **Sessions:** edit each session's name, job, limits, model class, skills and plugins, add your own sessions (for example "Data Engineer"), and **paste GitHub links** to the plugins and skills you prefer for each one. They're searched first during plugin discovery, pinned to a commit, and trust-checked unless they're official.
 - **Gates & words:** choose which sessions must sign before code reaches dev in each lane; set conditions such as "touches auth → Security must sign"; decide whether each of your words may be relayed.
-- **Check:** problems are found as you edit, by the same code the pre-push hook runs. Save stays off while there's an error.
+- **Check:** problems are found as you edit, by the same code the pre-push hook runs, labelled *Must fix*, *Worth fixing* or *Good to know*, each with a **Go to** button. Save stays off while anything must be fixed.
+- **Your approval:** per lane ("your word before building": approve or go) and per file condition ("you must approve the design first").
 - **Board:** each piece's lane and its missing sign-offs. **Presets:** Full company, Small team, Solo, Custom.
 
 Saving writes `.bootstrap/flow.json` and a readable `docs/flow.md` with a diagram for each lane. **What you draw is what's enforced:** the pre-push hook works out each piece's required sign-offs from its lane (`bootstrap piece R12 --lane high`) plus the conditions its files match. It judges a push by the flow **already on the remote**, so a commit can't loosen the rules to get itself through.
@@ -143,9 +177,9 @@ flowchart TB
 
 | Layer | Where | Catches | Works in |
 |---|---|---|---|
-| 1 Guard | pre-tool hook | force-push, `--no-verify`, hook tampering, server commands, live push by the wrong role, docs-only roles writing code, protected config | Claude Code (plugin or project hook); other tools where hooks exist — see adapters |
+| 1 Guard | pre-tool hook | force-push, `--no-verify`, hook tampering, server commands, live push by the wrong role, docs-only roles writing code, protected config, **signing as another session, routing or recording your words unless Chief of Staff, role spoofing** | Claude Code (plugin or project hook); other tools where hooks exist — see adapters |
 | 2 Permissions | `.claude/settings.local.json` per worktree (`bootstrap role`) | the role's `deny` list; plugin kit narrowing | Claude Code; partial elsewhere |
-| 3 Pre-push | `git config core.hooksPath .githooks` | code commits without complete sign-offs on that sha; live pushes without a release record (owner's words, question, shas, pasted check); deleting live/dev; conflict markers | **every tool and every human** |
+| 3 Pre-push | `git config core.hooksPath .githooks` | code not routed to a lane; code commits without complete sign-offs on that sha; screen changes without your recorded approval; HIGH work without your recorded "go"; live pushes without a release record (owner's words, question, shas, pasted check); deleting live/dev; conflict markers | **every tool and every human** |
 | 4 Server | GitHub branch protection / required checks | anything pushed from a machine without the hooks, including cloud agents | GitHub (configure it — see TODO) |
 
 Layers 1–3 run on the developer's machine and can be bypassed by someone determined to; layer 4 cannot.

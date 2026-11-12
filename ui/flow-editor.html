@@ -94,6 +94,28 @@ tr:last-child td{border-bottom:0}
 .preset span{color:var(--ink2);font-size:13px}
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;max-width:min(92vw,640px);font-size:13px;z-index:10}
 .empty{color:var(--ink3);font-size:13px}
+.hint{font-size:12.5px;color:var(--ink3);margin-top:3px;line-height:1.45}
+.intro{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:12px 14px;margin:0 0 16px;max-width:900px}
+.intro .ic{font-size:20px;line-height:1.2}
+.intro p{margin:0;color:var(--ink2)}
+.intro .ex{font-size:12.5px;color:var(--ink3);margin-top:4px}
+.welcome{background:var(--accent-soft);border-radius:14px;padding:16px 18px;margin:0 0 18px;display:grid;gap:10px;max-width:900px}
+.welcome h3{margin:0;font:600 17px var(--display)}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.steps div{background:var(--card);border-radius:10px;padding:10px 12px;font-size:13px}
+.steps b{display:block;margin-bottom:2px}
+.term{all:unset;border-bottom:1px dotted var(--ink3);cursor:help}
+.term:focus-visible{outline:2px solid var(--accent)}
+.drawer{position:fixed;inset:0 0 0 auto;width:min(440px,100vw);background:var(--card);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.12);z-index:20;display:flex;flex-direction:column}
+.drawer header{position:static;border:0;border-bottom:1px solid var(--line)}
+.drawer .body{overflow-y:auto;padding:14px 18px 40px;display:grid;gap:14px}
+.drawer dt{font-weight:600}
+.drawer dd{margin:2px 0 0;color:var(--ink2);font-size:13.5px}
+.drawer dl{margin:0;display:grid;gap:12px}
+.drawer dt[data-hl]{background:var(--warn-soft);border-radius:6px;padding:0 4px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink2);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+@media (max-width:760px){.steps{grid-template-columns:1fr}}
 footer{font-size:12.5px;color:var(--ink3);margin-top:22px}
 @media (max-width:760px){
   .shell{grid-template-columns:1fr}
@@ -112,6 +134,7 @@ footer{font-size:12.5px;color:var(--ink3);margin-top:22px}
   <div class="sp"></div>
   <span id="inherits"></span>
   <span id="checkBadge" class="badge b-mute">checking…</span>
+  <button class="btn" id="helpBtn" aria-haspopup="dialog">? Help</button>
   <button class="btn" id="themeBtn" aria-label="Toggle light or dark theme">◐</button>
   <button class="btn primary" id="saveBtn" disabled>Save</button>
 </header>
@@ -119,7 +142,11 @@ footer{font-size:12.5px;color:var(--ink3);margin-top:22px}
   <nav role="tablist" aria-label="Sections" id="nav"></nav>
   <main id="main"></main>
 </div>
-<div id="toast" class="toast" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<aside id="drawer" class="drawer" role="dialog" aria-modal="false" aria-labelledby="drawerTitle" hidden>
+  <header><h1 id="drawerTitle" style="font-size:18px">Help: words used here</h1><div class="sp"></div><button class="btn" id="drawerClose" aria-label="Close help">✕</button></header>
+  <div class="body" id="drawerBody"></div>
+</aside>
 <script>
 const TOKEN = '__FLOW_TOKEN__';
 let S = null;                 // server state: {mode, project, company, flow, findings, presets, board}
@@ -130,6 +157,37 @@ const GROUP = { 'chief-of-staff': 'r-owner', librarian: 'r-docs', researcher: 'r
 const grp = (id) => GROUP[id] || (S.flow.roles[id] && S.flow.roles[id].class === 'lane' ? 'r-core' : 'r-custom');
 const rname = (id) => (S.flow.roles[id] ? S.flow.roles[id].name : id);
 const isCompany = () => S.mode === 'company';
+
+// Plain-language glossary. Every dotted-underlined word on the page opens its entry.
+const GLOSSARY = [
+  ['session', 'Session', 'One AI assistant with one job, like a team member: QA tests, Design draws screens, Builder writes code. Each one has its own chat window.'],
+  ['chief', 'Chief of Staff', 'The one session you talk to. It turns your requests into tasks, hands them to the right sessions, and comes back to you with questions and results.'],
+  ['flow', 'Flow', 'The steps every piece of work goes through, from your request to it being live. You draw it here; the tools then make sure it is followed.'],
+  ['lane', 'Lane', 'One path through the flow. Different kinds of work take different lanes: a risky change takes the HIGH lane with extra checks, an urgent fix takes the Hotfix lane.'],
+  ['stage', 'Stage', 'One step in a lane, done by one session. Example: "Design draws the screen" or "QA writes the tests".'],
+  ['piece', 'Piece of work', 'One task, like "add a footer to invoices". The Chief of Staff gives each piece a name (R14) and puts it on a lane.'],
+  ['dev', 'Dev branch', 'The shared place where finished, checked work is collected and tested together before it goes live. Think of it as the team\'s staging area.'],
+  ['live', 'Live', 'What your real users see. Nothing goes live without your word.'],
+  ['gate', 'Gate', 'A checkpoint. At the dev gate, code is only accepted if the right sessions have approved it. At the live gate, it also needs your word and a release record.'],
+  ['signoff', 'Sign-off', 'A session\'s written "I checked this exact version and it is OK". A session can only sign as itself, and only the tools can count sign-offs.'],
+  ['word', 'Your word', 'A short message from you that moves work forward: "approve" (a design), "go" (start risky work), "release" (put work live), "apply" (put an urgent fix live).'],
+  ['relay', 'Relay', 'When you say your word to the Chief of Staff instead of in the session that acts. It is passed on with your exact words and the question you answered. You can switch relays off per word.'],
+  ['condition', 'Condition', 'A rule that adds a check when certain files change. Example: "if login or payment files change, Security must also approve".'],
+  ['preset', 'Preset', 'A ready-made flow to start from: Full company, Small team, Solo or Custom. You can change anything afterwards.'],
+  ['company', 'Company defaults', 'Rules your company sets once for all its projects. A 🔒 locked rule is a minimum: a project can add checks but never remove that one.'],
+  ['source', 'Preferred source', 'A GitHub link to a plugin or skill you like for a session. It is tried first when that session\'s tools are installed. Links not from well-known publishers are safety-checked first.'],
+  ['plugin', 'Plugins and skills', 'Add-ons that give a session extra abilities, like understanding your programming language or testing in a browser. Each session gets only the ones its job needs.'],
+];
+const term = (id, text) => `<button class="term" data-act="term" data-id="${id}">${esc(text)}</button>`;
+const intro = (icon, what, example) => `<div class="intro"><span class="ic" aria-hidden="true">${icon}</span><div><p>${what}</p>${example ? `<div class="ex">${example}</div>` : ''}</div></div>`;
+let welcomeHidden = false;
+try { welcomeHidden = localStorage.getItem('flow-welcome-hidden') === '1'; } catch { /* storage may be blocked */ }
+function openHelp(hl) {
+  $('#drawerBody').innerHTML = `<p class="hint" style="margin:0">Every dotted-underlined word on the page opens its explanation here.</p><dl>${GLOSSARY.map(([id, t, d]) => `<div id="g-${id}"><dt ${id === hl ? 'data-hl' : ''}>${esc(t)}</dt><dd>${esc(d)}</dd></div>`).join('')}</dl>
+    <div class="note"><b>How the rules are enforced:</b> when a session tries to send code to the ${esc('dev branch')} or live, a check on your computer counts the sign-offs and records this flow asks for. If anything is missing, the code is refused and the session is told exactly what's missing.</div>`;
+  $('#drawer').hidden = false;
+  const el = hl && document.getElementById(`g-${hl}`); (el || $('#drawerClose')).scrollIntoView({ block: 'center' }); $('#drawerClose').focus();
+}
 
 async function api(path, body) {
   const r = await fetch(path, { method: body ? 'POST' : 'GET', headers: { 'x-flow-token': TOKEN, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
@@ -176,7 +234,9 @@ function stageEditor(l) {
   const roles = Object.values(S.flow.roles).map((r) => `<option value="${esc(r.id)}" ${r.id === s.role ? 'selected' : ''}>${esc(r.name)}</option>`).join('');
   const words = Object.keys(S.flow.words).map((w) => `<option ${w === s.word ? 'selected' : ''}>${esc(w)}</option>`).join('');
   return `<div class="panel" style="margin-top:4px"><div class="form">
-    <label for="st-kind">Kind</label><select id="st-kind" data-act="st" data-k="kind"><option value="stage" ${s.kind === 'stage' ? 'selected' : ''}>Stage (a session's work)</option><option value="word" ${s.kind === 'word' ? 'selected' : ''}>Owner's word</option><option value="gate" ${s.kind === 'gate' ? 'selected' : ''}>Gate (push)</option></select>
+    <div class="full"><b>Editing step ${stageSel + 1} of ${l.stages.length}</b></div>
+    <label for="st-kind">Kind</label><div><select id="st-kind" data-act="st" data-k="kind"><option value="stage" ${s.kind === 'stage' ? 'selected' : ''}>Stage (a session's work)</option><option value="word" ${s.kind === 'word' ? 'selected' : ''}>Owner's word</option><option value="gate" ${s.kind === 'gate' ? 'selected' : ''}>Gate (push)</option></select>
+      <div class="hint">${s.kind === 'gate' ? 'A checkpoint. Who must approve at the dev gate is set on the Gates &amp; words tab.' : s.kind === 'word' ? 'A point where you must answer. Drawn so every session can see where your word is needed.' : 'Work one session does, like research, design, tests or the build.'}</div></div>
     ${s.kind === 'stage' ? `<label for="st-role">Session</label><select id="st-role" data-act="st" data-k="role">${roles}</select>` : ''}
     ${s.kind === 'word' ? `<label for="st-word">Word</label><select id="st-word" data-act="st" data-k="word">${words}</select>` : ''}
     ${s.kind === 'gate' ? `<label for="st-gate">Gate</label><select id="st-gate" data-act="st" data-k="gate"><option value="dev" ${s.gate === 'dev' ? 'selected' : ''}>Push to dev</option><option value="live" ${s.gate === 'live' ? 'selected' : ''}>Push live</option></select>` : ''}
@@ -191,16 +251,30 @@ const VIEWS = {
     if (!lane || !S.flow.lanes.some((l) => l.id === lane)) lane = S.flow.lanes[0] && S.flow.lanes[0].id;
     const l = S.flow.lanes.find((x) => x.id === lane);
     if (!l) return `<h2>Flow</h2><p class="lead">No lanes. Add one.</p><button class="chip add" data-act="addlane">+ Add lane</button>`;
-    return `<h2>Flow</h2><p class="lead">Each lane is the path a piece of work takes. Coloured boxes are stages owned by a session, dashed boxes are gates the pre-push hook enforces, and outlined boxes are where your word is needed. Click a box to edit it. What you draw here is what gets enforced.</p>
-    <div class="row">${S.flow.lanes.map((x) => `<button class="chip" aria-pressed="${x.id === lane}" data-act="lane" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join('')}<button class="chip add" data-act="addlane">+ Add lane</button></div>
+    const welcome = welcomeHidden || isCompany() ? '' : `<section class="welcome" aria-label="Getting started">
+      <h3>New here? This page decides how your AI team works.</h3>
+      <p style="margin:0;color:var(--ink2)">You talk to one assistant, the ${term('chief', 'Chief of Staff')}. It hands work to a team of ${term('session', 'sessions')} (Design, Builder, QA…). This page sets the route every task takes and who must check it. The tools then <b>refuse</b> work that skipped a check, so the rules here actually hold.</p>
+      <div class="steps">
+        <div><b>1 · Pick a starting point</b>The ${term('preset', 'Presets')} tab has ready-made flows. "Full company" suits most live products.</div>
+        <div><b>2 · Adjust if you want</b>Change the ${term('lane', 'lanes')} below, or choose who must approve code on the <i>Gates &amp; words</i> tab.</div>
+        <div><b>3 · Save</b>The ${term('signoff', 'sign-off')} checks start applying once the saved file is committed.</div>
+      </div>
+      <div class="row"><button class="btn small" data-act="hidewelcome">Got it, hide this</button><button class="btn small" data-act="help">Explain the words</button></div>
+    </section>`;
+    return `<h2>Flow</h2>${welcome}
+    ${intro('🛤️', `A ${term('lane', 'lane')} is the route a ${term('piece', 'piece of work')} takes, step by step. Coloured boxes are ${term('stage', 'stages')} (a session does something), dashed boxes are ${term('gate', 'gates')} (checkpoints), and outlined boxes are where ${term('word', 'your word')} is needed. Click any box to change it.`,
+      'Example: in the Normal lane, Research comes first, then Design, then your approval, then tests are written, then the code is built and checked.')}
+    <div class="row" role="group" aria-label="Lanes">${S.flow.lanes.map((x) => `<button class="chip" aria-pressed="${x.id === lane}" data-act="lane" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join('')}<button class="chip add" data-act="addlane">+ Add lane</button></div>
     <div class="panel" style="margin-top:12px"><div class="form">
-      <label for="ln-name">Lane name</label><input type="text" id="ln-name" data-act="ln" data-k="name" value="${esc(l.name)}">
-      <label for="ln-when">Used when</label><input type="text" id="ln-when" data-act="ln" data-k="when" value="${esc(l.when || '')}">
-      <label for="ln-word">Live word</label><select id="ln-word" data-act="ln" data-k="live_word"><option value="">— none —</option>${Object.keys(S.flow.words).map((w) => `<option ${w === l.live_word ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select>
-      <label>Lane id</label><div style="padding-top:6px"><code>${esc(l.id)}</code> <span class="empty">· put on a piece with <code>bootstrap piece &lt;id&gt; --lane ${esc(l.id)}</code></span> <button class="btn small danger" data-act="dellane">Remove lane</button></div>
+      <label for="ln-name">Lane name</label><div><input type="text" id="ln-name" data-act="ln" data-k="name" value="${esc(l.name)}" style="width:100%"><div class="hint">A short name you'll recognise, like "Risky changes".</div></div>
+      <label for="ln-when">Used when</label><div><input type="text" id="ln-when" data-act="ln" data-k="when" value="${esc(l.when || '')}" style="width:100%"><div class="hint">In plain words, which kind of work goes down this lane. The Chief of Staff reads this when it decides.</div></div>
+      <label for="ln-before">Your word before building</label><div><select id="ln-before" data-act="ln" data-k="require_word"><option value="">Not needed</option><option value="approve" ${l.require_word === 'approve' ? 'selected' : ''}>"approve": you approve the plan or design</option><option value="go" ${l.require_word === 'go' ? 'selected' : ''}>"go": you say go before risky work starts</option></select><div class="hint">If set, code from this lane is refused until your word is on record.</div></div>
+      <label for="ln-word">Your word to go live</label><div><select id="ln-word" data-act="ln" data-k="live_word"><option value="">— none —</option>${Object.keys(S.flow.words).map((w) => `<option ${w === l.live_word ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select><div class="hint">Usually "release". The urgent-fix lane uses "apply".</div></div>
+      <label>Lane id</label><div><code>${esc(l.id)}</code> <button class="btn small danger" data-act="dellane" style="margin-left:6px">Remove lane</button><div class="hint">The Chief of Staff puts work on this lane with <code>bootstrap piece R12 --lane ${esc(l.id)}</code>. Work with no lane set is refused.</div></div>
     </div></div>
-    <div class="lane">${l.stages.map((s, i) => stageCard(s, i) + (i < l.stages.length - 1 ? '<div class="arrow" aria-hidden="true">→</div>' : '')).join('')}<div class="arrow"></div><button class="addstage" data-act="addstage">+ Add stage</button></div>
-    ${stageSel !== null ? stageEditor(l) : ''}`;
+    <div class="lane" role="list" aria-label="Steps in this lane">${l.stages.map((s, i) => stageCard(s, i) + (i < l.stages.length - 1 ? '<div class="arrow" aria-hidden="true">→</div>' : '')).join('')}<div class="arrow"></div><button class="addstage" data-act="addstage">+ Add step</button></div>
+    <div class="legend" aria-label="Legend"><span><span class="dot" style="--rc:var(--r-docs)"></span>writes, researches, designs</span><span><span class="dot" style="--rc:var(--r-core)"></span>builds</span><span><span class="dot" style="--rc:var(--r-review)"></span>checks and reviews</span><span><span class="dot" style="--rc:var(--r-ops)"></span>releases and runs things</span><span>▭ dashed = checkpoint</span><span>▢ outlined = your word</span></div>
+    ${stageSel !== null ? stageEditor(l) : '<p class="hint" style="margin-top:10px">Tip: click a box to edit, move or remove it. On a phone, swipe the lane sideways.</p>'}`;
   },
   sessions() {
     if (!S.flow.roles[roleSel]) roleSel = Object.keys(S.flow.roles)[0];
@@ -209,19 +283,22 @@ const VIEWS = {
     const srcText = (Array.isArray(own) ? own : (r.sources || [])).join('\n');
     const list = (r.source_list || []).map((s) => `<div class="src"><div class="row" style="gap:6px"><span class="badge ${s.from === 'company' ? 'b-mute' : !s.ok ? 'b-bad' : s.official ? 'b-ok' : 'b-warn'}">${s.from === 'company' ? (s.required ? '🔒 Company, required' : 'Company default') : s.ok ? (s.official ? 'Official' : 'Trust check') : s.blocked ? '⛔ Blocked' : 'Invalid'}</span><span class="badge b-mute">${esc(s.kind)}</span></div><code>${esc(s.ok ? s.slug : s.line)}</code><div class="why">${esc(s.why || '')}</div></div>`).join('');
     const kits = (k) => (r[k] || []).map((x) => `<span class="kit">${esc(x)}<button data-act="kitdel" data-k="${k}" data-v="${esc(x)}" aria-label="Remove ${esc(x)}">✕</button></span>`).join('') || '<span class="empty">none</span>';
-    return `<h2>Sessions</h2><p class="lead">Each session's job, limits and kit. Paste GitHub links to the plugins and skills you prefer for a session: bootstrap searches them first and uses them when they fit the stack. It still pins every one to a commit and trust-checks anything that isn't from an official source.</p>
+    return `<h2>Sessions</h2>
+    ${intro('👥', `Your AI team. Each ${term('session', 'session')} has one job, things it must never do, and its own ${term('plugin', 'plugins and skills')}. Pick one on the left to see or change it, or add your own (for example a "Data Engineer").`,
+      `You can paste GitHub links to tools you like for a session under ${term('source', 'Preferred sources')}. They're tried first when the session is set up.`)}
     <div class="split"><div class="panel rolelist" role="listbox" aria-label="Sessions">${Object.values(S.flow.roles).map((x) => `<button class="r" role="option" aria-selected="${x.id === roleSel}" data-act="role" data-id="${esc(x.id)}"><span class="dot" style="--rc:var(--${grp(x.id)})"></span>${esc(x.name)}<span class="cls">${esc(x.class || '')}</span></button>`).join('')}
-      <div class="row" style="margin-top:10px"><input type="text" id="newRole" placeholder="new-role-id" style="width:130px"><button class="btn small" data-act="addrole">+ Add</button></div></div>
+      <div style="margin-top:10px"><label for="newRole" class="hint" style="display:block">Add a session (short id, e.g. data-engineer)</label><div class="row"><input type="text" id="newRole" placeholder="data-engineer" style="width:140px"><button class="btn small" data-act="addrole">+ Add</button></div></div></div>
     <div class="panel"><div class="form">
-      <label for="f-name">Display name</label><input type="text" id="f-name" data-act="rf" data-k="name" value="${esc(r.name)}">
-      <label>Role id</label><div style="padding-top:6px"><code>${esc(r.id)}</code> <span class="empty">fixed: names the log and sign-off files</span></div>
-      <label for="f-job">Job</label><textarea id="f-job" data-act="rf" data-k="job" rows="3" style="font-family:var(--text)">${esc(r.job)}</textarea>
-      <label for="f-never">Never</label><textarea id="f-never" data-act="rf" data-k="never" rows="2" style="font-family:var(--text)">${esc(r.never)}</textarea>
-      <label for="f-model">Model class</label><select id="f-model" data-act="rf" data-k="model">${['strongest', 'strong', 'mid', 'mid or strong', 'cheap', 'cheapest'].map((m) => `<option ${m === r.model ? 'selected' : ''}>${m}</option>`).join('')}</select>
-      <label>Skills</label><div class="kits">${kits('skills')}<input type="text" id="add-skills" placeholder="skill name" style="width:140px"><button class="btn small" data-act="kitadd" data-k="skills">+ skill</button></div>
-      <label>Plugins</label><div class="kits">${kits('plugins')}<input type="text" id="add-plugins" placeholder="plugin or *-lsp" style="width:140px"><button class="btn small" data-act="kitadd" data-k="plugins">+ plugin</button></div>
+      <label for="f-name">Display name</label><div><input type="text" id="f-name" data-act="rf" data-k="name" value="${esc(r.name)}" style="width:100%"><div class="hint">What you'll see in the session list and chat titles. Change it freely.</div></div>
+      <label>Role id</label><div><code>${esc(r.id)}</code><div class="hint">Fixed. It names this session's log and sign-off files, so it never changes.</div></div>
+      <label for="f-job">Job</label><div><textarea id="f-job" data-act="rf" data-k="job" rows="3" style="font-family:var(--text)">${esc(r.job)}</textarea><div class="hint">What this session is for, in a sentence or two. It's sent to the session when it starts.</div></div>
+      <label for="f-never">Never</label><div><textarea id="f-never" data-act="rf" data-k="never" rows="2" style="font-family:var(--text)">${esc(r.never)}</textarea><div class="hint">Things it must never do. The most important ones (writing code, going live, signing for others) are blocked by the tools, not just written here.</div></div>
+      <label for="f-model">Model class</label><div><select id="f-model" data-act="rf" data-k="model">${['strongest', 'strong', 'mid', 'mid or strong', 'cheap', 'cheapest'].map((m) => `<option ${m === r.model ? 'selected' : ''}>${m}</option>`).join('')}</select><div class="hint">Stronger models think better but cost more. Use them for deciding and reviewing; cheaper ones are fine for note-keeping.</div></div>
+      <label>Skills</label><div><div class="kits">${kits('skills')}<input type="text" id="add-skills" placeholder="skill name" aria-label="Skill to add" style="width:140px"><button class="btn small" data-act="kitadd" data-k="skills">+ skill</button></div><div class="hint">Know-how the session can follow, like "test-driven-development".</div></div>
+      <label>Plugins</label><div><div class="kits">${kits('plugins')}<input type="text" id="add-plugins" placeholder="plugin or *-lsp" aria-label="Plugin to add" style="width:140px"><button class="btn small" data-act="kitadd" data-k="plugins">+ plugin</button></div><div class="hint">Tools it may use. <code>*-lsp</code> means "the code-understanding plugin for whatever language the project uses".</div></div>
       <label for="f-src">Preferred sources</label>
       <div><textarea id="f-src" data-act="src" rows="4" placeholder="One per line:&#10;https://github.com/owner/repo&#10;owner/repo&#10;https://github.com/owner/repo/tree/main/skills/name">${esc(srcText)}</textarea>
+        <div class="hint">Paste one GitHub link per line: a whole repo, or a link to one skill folder inside it. Each link is checked as you type. "Official" ones come from well-known publishers. "Trust check" ones are safety-checked before install. "Blocked" ones are never installed.</div>
         <div style="margin-top:8px">${list || '<div class="empty">No preferred sources. Bootstrap searches the marketplaces and GitHub on its own.</div>'}</div></div>
       ${r.class === 'custom' ? '<div class="full"><button class="btn small danger" data-act="delrole">Remove this session</button></div>' : ''}
     </div></div></div>`;
@@ -240,45 +317,56 @@ const VIEWS = {
       }
       return `<input type="checkbox" data-act="gate" data-l="${esc(l.id)}" data-r="${esc(r)}" ${(l.dev_signoffs || []).includes(r) ? 'checked' : ''} aria-label="${esc(rname(r))} signs ${esc(l.name)}">`;
     };
-    return `<h2>Gates &amp; words</h2><p class="lead">Which sessions must sign the exact commit before code can go to dev, per lane, and which of your words move work forward.</p>
-    <div class="tbl"><table><tr><th>Lane · push to dev</th>${signers.map((r) => `<th class="c">${esc(rname(r))}</th>`).join('')}</tr>
+    return `<h2>Gates &amp; words</h2>
+    ${intro('✅', `Who must check code before it joins the ${term('dev', 'dev branch')}. Tick a box and that session's ${term('signoff', 'sign-off')} becomes required for that lane. Code without every required sign-off is refused automatically.`,
+      'Example: ticking Security for Normal means every normal change needs Security to approve it, not just risky ones.')}
+    <div class="tbl"><table><caption class="hint" style="text-align:left;padding:8px 10px;caption-side:top">Rows are lanes, columns are sessions. ✓ = must approve.</caption><tr><th>Lane · push to dev</th>${signers.map((r) => `<th class="c">${esc(rname(r))}</th>`).join('')}</tr>
     ${S.flow.lanes.map((l) => `<tr><td><b>${esc(l.name)}</b>${l.live_exempt_signoffs ? ' <span class="empty">exempt (live breakage)</span>' : ''}</td>${signers.map((r) => `<td class="c">${cell(l, r)}</td>`).join('')}</tr>`).join('')}</table></div>
     ${S.flow.company ? `<p class="empty" style="margin:6px 0 0">🔒 = set by ${esc(S.flow.company.name)} defaults. A project can add sign-offs but can't remove these.</p>` : ''}
-    <h3>Conditions that add a sign-off</h3>
-    <div class="panel">${S.flow.conditions.map((c, i) => `<div class="form" style="padding:8px 0;border-top:${i ? '1px solid var(--line)' : '0'}">
-      <label for="c-l-${i}">If</label><input type="text" id="c-l-${i}" data-act="cond" data-i="${i}" data-k="label" value="${esc(c.label)}">
-      <label for="c-g-${i}">Files</label><input type="text" id="c-g-${i}" data-act="cond" data-i="${i}" data-k="globs" value="${esc((c.globs || []).join(', '))}">
-      <label for="c-r-${i}">Require</label><div class="row"><select id="c-r-${i}" data-act="cond" data-i="${i}" data-k="require">${Object.values(S.flow.roles).map((r) => `<option value="${esc(r.id)}" ${(c.require || [])[0] === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select><button class="btn small danger" data-act="delcond" data-i="${i}">Remove</button></div>
-    </div>`).join('')}<button class="chip add" style="margin-top:8px" data-act="addcond">+ Add condition</button></div>
-    <h3>Your words</h3>
+    <h3>${term('condition', 'Extra checks')} when certain files change</h3>
+    <p class="hint" style="margin:-4px 0 8px">These apply in every lane, on top of the ticks above. The tools look at which files a piece of work changed.</p>
+    <div class="panel">${S.flow.conditions.map((c, i) => `<div class="form" style="padding:10px 0;border-top:${i ? '1px solid var(--line)' : '0'}">
+      <label for="c-l-${i}">If the work…</label><div><input type="text" id="c-l-${i}" data-act="cond" data-i="${i}" data-k="label" value="${esc(c.label)}" style="width:100%"><div class="hint">A plain description, e.g. "Touches payments".</div></div>
+      <label for="c-g-${i}">Files</label><div><input type="text" id="c-g-${i}" data-act="cond" data-i="${i}" data-k="globs" value="${esc((c.globs || []).join(', '))}" style="width:100%"><div class="hint">File patterns, comma-separated. <code>**</code> means "any folders", <code>*</code> means "any name": <code>**/payments/**</code> is every file in any payments folder.</div></div>
+      <label for="c-r-${i}">…then also</label><div><div class="row"><select id="c-r-${i}" data-act="cond" data-i="${i}" data-k="require" aria-label="Session that must also approve">${Object.values(S.flow.roles).map((r) => `<option value="${esc(r.id)}" ${(c.require || [])[0] === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select><span>must approve</span></div>
+        <label class="row" style="margin-top:6px;gap:6px"><input type="checkbox" data-act="condword" data-i="${i}" ${c.require_word === 'approve' ? 'checked' : ''}> and you must approve the design first (your "approve" on record, with a link to the design)</label>
+        <div class="row" style="margin-top:6px"><button class="btn small danger" data-act="delcond" data-i="${i}">Remove this check</button></div></div>
+    </div>`).join('')}<button class="chip add" style="margin-top:8px" data-act="addcond">+ Add a check</button></div>
+    <h3>${term('word', 'Your words')}</h3>
+    <p class="hint" style="margin:-4px 0 8px">Short answers from you that move work forward. "${term('relay', 'Relay allowed')}" means you can say it to the Chief of Staff, who passes it on with your exact words. Untick to require you to type it in the session that acts.</p>
     <div class="tbl"><table><tr><th>Word</th><th>Meaning</th><th class="c">Relay allowed</th><th>A relay must carry</th></tr>
     ${Object.entries(S.flow.words).map(([w, v]) => `<tr><td><b>${esc(w)}</b></td><td>${esc(v.label || '')}</td><td class="c">${(floor.no_relay || []).includes(w) && !isCompany() ? '<span class="badge b-mute">🔒 off</span>' : `<input type="checkbox" data-act="relay" data-w="${esc(w)}" ${v.relay ? 'checked' : ''} aria-label="Relay of ${esc(w)} allowed">`}</td><td>exact words + the question asked + date${['release', 'apply'].includes(w) ? ', shas, pasted check, sign-offs' : ''}</td></tr>`).join('')}</table></div>`;
   },
   check() {
     const lvl = { error: 'b-bad', warning: 'b-warn', info: 'b-mute', ok: 'b-ok' };
+    const say = { error: 'Must fix', warning: 'Worth fixing', info: 'Good to know', ok: 'Looks good' };
     const order = { error: 0, warning: 1, info: 2, ok: 3 };
     const f = [...S.findings].sort((a, b) => order[a.level] - order[b.level]);
-    return `<h2>Check</h2><p class="lead">The flow is checked every time you change it, by the same code the pre-push hook uses. Save stays off while there's an error; warnings let you save.</p>
-    <div class="panel">${f.map((x) => `<div class="find"><span class="badge ${lvl[x.level]}">${esc(x.level)}</span><div>${esc(x.msg)}${x.fix ? `<div class="fix">Fix: ${esc(x.fix)}</div>` : ''}</div>${x.where ? `<button class="btn small" data-act="goto" data-where="${esc(x.where)}">Go to</button>` : '<span></span>'}</div>`).join('') || '<div class="empty">Nothing to report.</div>'}</div>`;
+    return `<h2>Check</h2>
+    ${intro('🔎', 'Your flow is checked every time you change something, for gaps like "nobody reviews the code" or "a lane goes live without your word". <b>Must fix</b> items block saving. <b>Worth fixing</b> items let you save, but read them.', 'Each item has a "Go to" button that takes you to the place to fix it.')}
+    <div class="panel">${f.map((x) => `<div class="find"><span class="badge ${lvl[x.level]}">${esc(say[x.level] || x.level)}</span><div>${esc(x.msg)}${x.fix ? `<div class="fix">Fix: ${esc(x.fix)}</div>` : ''}</div>${x.where ? `<button class="btn small" data-act="goto" data-where="${esc(x.where)}">Go to</button>` : '<span></span>'}</div>`).join('') || '<div class="empty">Nothing to report.</div>'}</div>`;
   },
   board() {
     if (isCompany()) return '<h2>Board</h2><p class="lead">The board belongs to a project. Open the editor inside a project to see it.</p>';
     const cols = [...new Set(S.board.flatMap((p) => [...p.required, ...Object.keys(p.signed)]))];
     const s = (p, r) => p.signed[r] ? '<span class="sig s-ok" title="signed">✓</span>' : p.required.includes(r) ? '<span class="sig s-no" title="missing">·</span>' : '<span class="sig s-na">—</span>';
-    return `<h2>Board</h2><p class="lead">Read from <code>docs/signoffs/</code>: where each piece is and which sign-offs are still missing. Conditions that depend on the changed files (Security, Design…) are added at push time.</p>
+    return `<h2>Board</h2>
+    ${intro('📋', `Every ${term('piece', 'piece of work')} in progress, and who has approved it so far. <span class="sig s-ok">✓</span> approved · <span class="sig s-no">·</span> still waiting · — not needed.`, 'Extra checks that depend on which files changed (Security, Design…) and your recorded words are added when the code is sent. If something is missing then, the session is told exactly what.')}
     ${S.board.length ? `<div class="tbl"><table><tr><th>Piece</th><th>Lane</th>${cols.map((c) => `<th class="c">${esc(rname(c))}</th>`).join('')}<th>Can push?</th></tr>
     ${S.board.map((p) => `<tr><td><b>${esc(p.piece)}</b> ${esc(p.title)}</td><td>${esc((S.flow.lanes.find((l) => l.id === p.lane) || {}).name || p.lane)}</td>${cols.map((c) => `<td class="c">${s(p, c)}</td>`).join('')}<td>${p.missing.length ? `<span class="badge b-warn">waiting: ${esc(p.missing.map(rname).join(', '))}</span>` : '<span class="badge b-ok">gate met</span>'}</td></tr>`).join('')}</table></div>`
       : '<div class="panel empty">No pieces yet. They appear when sessions run <code>bootstrap piece</code> and <code>bootstrap signoff</code>.</div>'}`;
   },
   presets() {
     const cur = L().preset || S.flow.preset;
-    return `<h2>Presets</h2><p class="lead">A starting point. Choosing a preset replaces your lane edits (you're asked first). Session kits and preferred sources stay.</p>
+    return `<h2>Presets</h2>
+    ${intro('🧭', `A ${term('preset', 'preset')} is a ready-made flow. <b>Not sure? Choose "Full company"</b>: it's the safest starting point, and you can relax things later.`, "Switching presets replaces your lane changes (you're asked first). Your sessions' tools and preferred sources are kept.")}
     <div class="grid2">${Object.entries(S.presets).map(([k, p]) => `<button class="preset" aria-pressed="${k === cur}" data-act="preset" data-id="${esc(k)}"><b>${esc(p.label)}</b><span>${esc(p.about)}</span></button>`).join('')}</div>`;
   },
   company() {
     if (isCompany()) return companyEditor();
     const c = S.flow.company, floor = S.flow.floor;
-    return `<h2>Company defaults</h2><p class="lead">Rules set once for every project. A project can change a default, but a 🔒 locked rule is a floor: a project can make it stricter, never looser.</p>
+    return `<h2>Company defaults</h2>
+    ${intro('🏢', `Rules your company sets once for all its projects (${term('company', 'company defaults')}). A project can change a default, but a 🔒 locked rule is a minimum: a project can add checks, never remove that one.`, 'Most people leave this empty to begin with. Fill in "Defaults live in" only if your company keeps shared rules in a GitHub repo or folder.')}
     <div class="panel"><div class="form">
       <label for="ext">Defaults live in</label><div><input type="text" id="ext" data-act="ext" style="width:100%" value="${esc(S.project.extends || '')}" placeholder="github:acme/agent-defaults@<sha>   or   ../agent-defaults/company.json">
       <div class="empty" style="margin-top:4px">A company GitHub repo pinned to a commit (a reviewed copy is kept in <code>.bootstrap/company.json</code>), or a local file. Leave empty for none.</div>
@@ -334,6 +422,10 @@ document.addEventListener('click', async (e) => {
   const t = e.target.closest('[data-act]'); if (!t) return;
   const act = t.dataset.act, l = lane && S.flow.lanes.find((x) => x.id === lane);
   if (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA') { if (t.type !== 'checkbox') return; }
+  if (act === 'term') { return openHelp(t.dataset.id); }
+  if (act === 'help') { return openHelp(); }
+  if (act === 'hidewelcome') { welcomeHidden = true; try { localStorage.setItem('flow-welcome-hidden', '1'); } catch { /* fine */ } return render(); }
+  if (act === 'condword') { const c = S.flow.conditions[+t.dataset.i], lay = L(); lay.conditions ||= []; let x = lay.conditions.find((y) => y.id === c.id); if (!x) { x = JSON.parse(JSON.stringify(c)); lay.conditions.push(x); } if (t.checked) x.require_word = 'approve'; else x.require_word = ''; return changed(true); }
   if (act === 'tab') { tab = t.dataset.id; stageSel = null; return render(); }
   if (act === 'lane') { lane = t.dataset.id; stageSel = null; return render(); }
   if (act === 'stage') { stageSel = stageSel === +t.dataset.i ? null : +t.dataset.i; return render(); }
@@ -386,9 +478,12 @@ document.addEventListener('input', (e) => {
   if (e.target.dataset && e.target.dataset.act === 'src') { roleEdit(roleSel).sources = e.target.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean); changed(); }
 });
 $('#saveBtn').addEventListener('click', async () => {
-  try { const r = await api('/api/save', isCompany() ? { company: S.company } : { project: S.project }); dirty = false; render(); toast(`Saved ${r.saved.join(' and ')}. ${r.note}`); }
+  try { const r = await api('/api/save', isCompany() ? { company: S.company } : { project: S.project }); dirty = false; render(); toast(isCompany() ? `Saved. ${r.note}` : 'Saved. Next step: commit .bootstrap/flow.json and docs/flow.md (ask the Chief of Staff, or use git). The new rules apply once that commit is pushed.'); }
   catch (e) { toast(`Not saved: ${e.message}`); if (e.data && e.data.findings) { S.findings = e.data.findings; tab = 'check'; render(); } }
 });
+$('#helpBtn').addEventListener('click', () => openHelp());
+$('#drawerClose').addEventListener('click', () => { $('#drawer').hidden = true; $('#helpBtn').focus(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#drawer').hidden) { $('#drawer').hidden = true; $('#helpBtn').focus(); } });
 $('#themeBtn').addEventListener('click', () => { const r = document.documentElement; r.dataset.theme = (r.dataset.theme === 'dark' || (!r.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches)) ? 'light' : 'dark'; });
 window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 api('/api/state').then((st) => { S = st; if (S.mode === 'company') { S.company ||= { version: 1, name: 'Company' }; } render(); }).catch((e) => { $('#main').innerHTML = `<div class="panel"><b>Could not load:</b> ${esc(e.message)}. Open the exact link printed by <code>bootstrap flow</code>.</div>`; });

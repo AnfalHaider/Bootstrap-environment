@@ -7,6 +7,7 @@
 //   bootstrap require <piece> <role> [<role>...]                 set which roles must sign a piece
 //   bootstrap release <scope> --shas a,b --words "..." --question "..." --said-at "..." --check <file> [--relayed-by chief-of-staff]
 //   bootstrap piece <piece> --lane <lane-id> [--title "..."]    put a piece of work on a lane of the flow
+//   bootstrap approve <piece> --word approve|go --words "..." --question "..." --said-at ... [--artifact <link>]
 //   bootstrap status                                             role, policy, hooksPath, flow, sign-offs at HEAD
 //   bootstrap flow [--open] [--port N]                           visual flow editor for this project (local only)
 //   bootstrap flow --company <dir> [--open]                      edit a company defaults folder
@@ -132,19 +133,47 @@ function role(root, id) {
   console.log('Verify (R14): open this session\'s skill/tool list and confirm it shows only its kit.');
 }
 
+// A session acts only as its own role. Outside a session (no .bootstrap/session.json) it is the owner at
+// a terminal, who may record anything. Inside one, record commands are limited the same way the guard is.
+function mustBe(root, allowed, what) {
+  const me = currentRole(root);
+  if (me !== 'unassigned' && !allowed.includes(me)) { console.error(`${what} is for ${allowed.join(' / ')} only; this session is "${me}".`); process.exit(1); }
+  return me;
+}
+
 function signoff(root, piece, args) {
-  const r = arg(args, 'role', currentRole(root));
+  const me = currentRole(root);
+  const r = arg(args, 'role', me);
+  if (me !== 'unassigned' && r !== me) { console.error(`This session is "${me}"; it cannot sign as "${r}". A session signs only as itself.`); process.exit(1); }
   const sha = arg(args, 'sha', git(['rev-parse', 'HEAD'], root));
   const verdict = (arg(args, 'verdict', '') || '').toUpperCase();
   if (!['PASS', 'FAIL'].includes(verdict)) { console.error('--verdict PASS|FAIL is required'); process.exit(1); }
-  if (r === 'unassigned') { console.error('no role: run `bootstrap role <id>` or pass --role'); process.exit(1); }
+  if (r === 'unassigned') { console.error('no role: run `bootstrap role <id>` (or, as the owner outside a session, pass --role)'); process.exit(1); }
   const p = join(root, 'docs', 'signoffs', piece, `${r}.md`);
   mkdirSync(dirname(p), { recursive: true });
   writeFileSync(p, `---\npiece: ${piece}\nrole: ${r}\nsha: ${sha}\nverdict: ${verdict}\ndate: ${today()}\n---\n\n${arg(args, 'note', '') || '<evidence: command, output, file:line>'}\n`);
   log('WRITE', `${p} (${verdict} @ ${sha.slice(0, 9)}) — commit it as a docs-only commit`);
 }
 
+function approve(root, piece, args) {
+  mustBe(root, ['chief-of-staff'], '`bootstrap approve`');
+  const word = arg(args, 'word', 'approve');
+  if (!['approve', 'go'].includes(word)) { console.error('--word approve|go'); process.exit(1); }
+  const missing = ['words', 'question', 'said-at'].filter((n) => !arg(args, n));
+  if (word === 'approve' && !arg(args, 'artifact')) missing.push('artifact');
+  if (missing.length) { console.error(`missing --${missing.join(', --')}  (the owner's exact words, the question exactly as asked, when${word === 'approve' ? ', and the approved artifact link' : ''})`); process.exit(1); }
+  const relayed = arg(args, 'relayed-by', 'none (typed in this chat)');
+  const { flow } = loadFlow(root);
+  if (relayed.startsWith('chief-of-staff') && flow.words[word] && flow.words[word].relay === false) { console.error(`Relays of "${word}" are turned off in the flow; the owner must type it in the acting session.`); process.exit(1); }
+  const p = join(root, 'docs', 'signoffs', piece, `_${word}.md`);
+  mkdirSync(dirname(p), { recursive: true });
+  const q = (s) => `"${String(s).replace(/"/g, "'")}"`;
+  writeFileSync(p, `---\npiece: ${piece}\nword: ${word}\nowner_words: ${q(arg(args, 'words'))}\nquestion: ${q(arg(args, 'question'))}\nsaid_at: ${arg(args, 'said-at')}\nrelayed_by: ${relayed}\n${word === 'approve' ? `artifact: ${arg(args, 'artifact')}\n` : ''}date: ${today()}\n---\n`);
+  log('WRITE', `${p} — commit it as a docs-only commit`);
+}
+
 function requireRoles(root, piece, roles) {
+  mustBe(root, ['chief-of-staff', 'security'], '`bootstrap require`');
   const p = join(root, 'docs', 'signoffs', piece, '_required.md');
   mkdirSync(dirname(p), { recursive: true });
   writeFileSync(p, `---\npiece: ${piece}\nroles: [${roles.join(', ')}]\nset_by: ${currentRole(root)}\ndate: ${today()}\n---\n`);
@@ -152,6 +181,7 @@ function requireRoles(root, piece, roles) {
 }
 
 function release(root, scope, args) {
+  mustBe(root, ['chief-of-staff', 'release-ops', 'hotfix'], '`bootstrap release`');
   const need = ['shas', 'words', 'question', 'said-at', 'check'];
   const missing = need.filter((n) => !arg(args, n));
   if (missing.length) { console.error(`missing --${missing.join(', --')}  (7E: words + question + date, shas, pasted check)`); process.exit(1); }
@@ -181,7 +211,9 @@ function status(root) {
 }
 
 function piece(root, id, args) {
-  const laneId = arg(args, 'lane', 'normal');
+  mustBe(root, ['chief-of-staff'], '`bootstrap piece`');
+  const laneId = arg(args, 'lane', null);
+  if (!laneId) { console.error('--lane <lane-id> is required: the Chief of Staff decides the lane for every piece.'); process.exit(1); }
   const { flow } = loadFlow(root);
   if (!flow.lanes.some((l) => l.id === laneId)) { console.error(`no lane "${laneId}"; lanes: ${flow.lanes.map((l) => l.id).join(', ')}`); process.exit(1); }
   const p = join(root, 'docs', 'signoffs', id, '_piece.md');
@@ -232,6 +264,7 @@ function main() {
   if (!root) { console.error('not inside a git repository'); process.exit(1); }
   if (cmd === 'init') init(root, args);
   else if (cmd === 'piece' && args[0]) piece(root, args[0], args.slice(1));
+  else if (cmd === 'approve' && args[0]) approve(root, args[0], args.slice(1));
   else if (cmd === 'flow') flowCmd(root, args);
   else if (cmd === 'role' && args[0]) role(root, args[0]);
   else if (cmd === 'signoff' && args[0]) signoff(root, args[0], args.slice(1));

@@ -42,6 +42,49 @@ export function pushTargets(command, cwd) {
   return out;
 }
 
+// Who may write which record. A session signs only as itself; only the Chief of Staff sets a piece's
+// lane and records the owner's approval/go; Security may also add required roles (tightening only).
+const RECORD_WRITERS = { _piece: ['chief-of-staff'], _approve: ['chief-of-staff'], _go: ['chief-of-staff'], _required: ['chief-of-staff', 'security'] };
+const RELEASE_WRITERS = ['chief-of-staff', 'release-ops', 'hotfix'];
+const WRITE_OPS = /(>>?|\btee\b|\bcp\b|\bmv\b|\brm\b|sed\s+-i|Set-Content|Add-Content|Out-File|New-Item|Copy-Item|Move-Item|Remove-Item|\bdel\b|\bln\b|git\s+(checkout|restore)\b)/;
+
+export function recordRule(rel, role, policy) {
+  const sd = policy.signoffs.dir.replace(/\/$/, '');
+  const m = new RegExp(`^${sd}/([^/]+)/([^/]+)\\.md$`).exec(rel);
+  if (m) {
+    const name = m[2];
+    if (RECORD_WRITERS[name]) return RECORD_WRITERS[name].includes(role) ? null
+      : `${rel} is a ${name.slice(1)} record. Only ${RECORD_WRITERS[name].join(' / ')} writes it (you are "${role}").`;
+    if (name.startsWith('_')) return `${rel}: unknown record type.`;
+    return name === role ? null
+      : `${rel} is ${name}'s sign-off. A session signs only as itself (you are "${role}"). Ask ${name} to review and sign.`;
+  }
+  if (rel.startsWith(`${sd}/`)) return role === 'chief-of-staff' ? null : `${rel}: only the Chief of Staff manages sign-off folders.`;
+  if (rel.startsWith(`${policy.releases.dir.replace(/\/$/, '')}/`)) return RELEASE_WRITERS.includes(role) ? null
+    : `${rel} is a release record. Only ${RELEASE_WRITERS.join(' / ')} writes it (you are "${role}").`;
+  return null;
+}
+
+function shellRecordCheck(command, role, policy) {
+  if (/\bBOOTSTRAP_ROLE\s*=|\$env:BOOTSTRAP_ROLE/.test(command)) return 'Setting BOOTSTRAP_ROLE in a command is not allowed: a session acts only as its own role (`bootstrap role` sets it once per worktree).';
+  if (/\.bootstrap[\\/]session\.json/.test(command) && WRITE_OPS.test(command) && !/bootstrap(\.mjs)?\s+role\b/.test(command)) return 'Changing .bootstrap/session.json by hand is not allowed; the session role is set once with `bootstrap role`.';
+  // The toolkit's own record commands
+  const cli = /bootstrap(?:\.mjs)?\s+(signoff|require|piece|approve|release)\b(.*)$/m.exec(command);
+  if (cli) {
+    const [, sub, rest] = cli;
+    if (sub === 'signoff') { const as = /--role\s+(\S+)/.exec(rest); if (as && as[1] !== role) return `Signing as "${as[1]}" is not allowed; you are "${role}". A session signs only as itself.`; if (role === 'unassigned') return 'This session has no role; run `bootstrap role <id>` first. Only the owner signs outside a session.'; }
+    const who = { require: RECORD_WRITERS._required, piece: RECORD_WRITERS._piece, approve: RECORD_WRITERS._approve, release: RELEASE_WRITERS }[sub];
+    if (who && !who.includes(role)) return `\`bootstrap ${sub}\` is for ${who.join(' / ')} only (you are "${role}").`;
+  }
+  // Raw writes into the record folders
+  if (WRITE_OPS.test(command)) {
+    const sd = policy.signoffs.dir.replace(/\/$/, ''), rd = policy.releases.dir.replace(/\/$/, '');
+    const paths = command.match(new RegExp(`(?:${sd}|${rd})/[^\\s"'>|;&]*`, 'g')) || [];
+    for (const p of paths) { const why = recordRule(p.replace(/\\/g, '/'), role, policy) || (!/\.md$/.test(p) && role !== 'chief-of-staff' ? `${p}: only the Chief of Staff manages record folders.` : null); if (why) return why; }
+  }
+  return null;
+}
+
 export function decide({ tool, command = '', filePath = '', cwd = process.cwd() }) {
   const root = repoRoot(cwd);
   if (!root) return { allow: true };
@@ -60,6 +103,8 @@ export function decide({ tool, command = '', filePath = '', cwd = process.cwd() 
         return { allow: false, reason: `Blocked for role "${role}": command matches a rule in .bootstrap/policy.json or roles/${role}.md (${pat}). If the owner wants this, they run it themselves, or the Chief of Staff records their word first.` };
       }
     }
+    const rec = shellRecordCheck(command, role, policy);
+    if (rec) return { allow: false, reason: `Blocked: ${rec}` };
     if (/\bgit\s+push\b/.test(command)) {
       for (const dst of pushTargets(command, cwd)) {
         if (dst === policy.branches.live && !policy.releases.live_pushers.includes(role)) {
@@ -73,6 +118,8 @@ export function decide({ tool, command = '', filePath = '', cwd = process.cwd() 
   if (WRITE_TOOLS.has(tool) && filePath) {
     const rel = toRepoPath(root, filePath, cwd);
     if (rel.startsWith('..')) return { allow: true }; // outside the project: not ours to police
+    const rec = recordRule(rel, role, policy);
+    if (rec) return { allow: false, reason: `Blocked: ${rec}` };
     if (matchesAny(rel, policy.protected_globs) && role !== 'chief-of-staff') {
       return { allow: false, reason: `Blocked: ${rel} is protected toolkit config. Only the Chief of Staff changes it, on the owner's typed word.` };
     }
