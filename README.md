@@ -7,9 +7,9 @@ Design, Builder, QA, Tech Lead, Security, Release Ops and more. Every change is 
 members, nothing visual or risky lands without **your approval**, and nothing goes live without **your word**.
 These rules are enforced by the tools, not left to the assistants' good behaviour.
 
-![The flow editor: a beginner-friendly page where you decide how your AI team works](docs/images/flow.png)
+![The flow canvas: drag sessions onto the flow, link steps, and see who must approve at each checkpoint](docs/images/canvas.png)
 
-> **Status: 0.4.0, early.** 58 tests pass against real git repositories. Claude Code is fully supported;
+> **Status: 0.5.0, early.** 63 tests pass against real git repositories. Claude Code is fully supported;
 > adapters for 13 other AI tools follow their November 2026 docs and still need testing inside each tool
 > (see [TODO.md](TODO.md)).
 
@@ -76,7 +76,8 @@ in turn, and the push checks still keep a minimum of discipline.
 - **Control without micromanaging.** You decide only what matters: approve designs, say "go" on risky work, release. Everything else runs on its own.
 - **Proof, not promises.** Every approval carries evidence and the exact commit it covers, so "done" means done.
 - **Enforced, not hoped for.** A git pre-push check that runs in every tool refuses work that skipped a step, and explains what's missing.
-- **Your process, your way.** A visual editor to change lanes, checks and the team. Presets for full company, small team, solo or custom.
+- **Your process, your way.** A drag-and-drop canvas: drop sessions onto the flow, link steps, run steps side by side, drag reviewers onto a checkpoint. A three-question wizard picks a starting flow, and undo/redo makes it safe to try things.
+- **See before you commit.** "Try a change" shows the path a change would take, who must approve it, and whether a push would get through. It uses the same logic as the real pre-push check.
 - **Same rules everywhere.** Company defaults with locked minimums, approved sources and blocked sources.
 - **Remembers.** Lessons, decisions and hand-overs live in the repository, not in a chat that disappears.
 - **Light on tokens.** Each session reads only its own rules and asks short commands instead of reading big files.
@@ -225,16 +226,42 @@ flowchart TB
 
 ## Screenshots
 
-The visual editor (`bootstrap flow`) runs locally in your browser. It's written for beginners: a welcome
-card, plain-language explanations on every tab, a hint under every field, and a Help panel for every term.
+The visual editor (`bootstrap flow --open`) runs locally in your browser. Everything you can drag can also
+be done with buttons or the keyboard, and every term has a plain-language explanation one click away.
+
+### The canvas: draw your flow by dragging
+
+![Flow canvas](docs/images/canvas.png)
+
+- **Drag a session** from the left onto a **line** to add a step there, or onto a **step** to run both **side by side** (shaded group).
+- **Drag a step's ● dot** onto another step to **link** them, so the second step comes right after the first.
+- **Checkpoints show faces.** Drag a session onto a checkpoint to require its sign-off; drag a face off to remove it. 🔒 faces are company minimums and refuse to move.
+- **Click a step** to edit it on the right. Drag it to the 🗑 to remove it. **Undo/Redo** with Ctrl+Z / Ctrl+Y. **Fit** zooms the whole lane into view.
+- **Keyboard:** Tab to a step, ← → to move it, Delete to remove it, Enter to edit it.
+
+### Try a change before it happens
+
+![Try a change: the HIGH lane lit up, with Design added by the screen change](docs/images/simulate.png)
+
+Tick what a change touches, for example login files and a screen, and press **Show me**. The editor
+switches to the lane that change would take, lights up its path step by step, and adds the extra reviewers
+as dashed faces. It then lists every approval and every word of yours that's needed. If any is missing when
+a session pushes, the push is refused. The answer comes from the same code the pre-push check runs.
+
+### Start in three questions
+
+<p align="center"><img src="docs/images/wizard.png" width="640" alt="First-run wizard"></p>
+
+First time? Three plain questions (what you're building, whether risky work should wait for your "go",
+whether your company has shared rules) pick a starting flow. **Start over** reopens them at any time.
+
+### The other tabs
 
 | | |
 |---|---|
-| **Sessions:** each team member's job, limits, tools, and the GitHub links you prefer for it. Every link is checked as you type (official, trust check, blocked, invalid). ![Sessions tab](docs/images/sessions.png) | **Gates & words:** tick who must approve code in each lane, add checks for sensitive files, and decide which of your words may be relayed. 🔒 marks company minimums. ![Gates tab](docs/images/gates.png) |
-| **Board:** every piece of work and who has approved it so far, read straight from the sign-off files. ![Board tab](docs/images/board.png) | **Check:** gaps are found as you edit ("nobody reviews this lane"). *Must fix* items block saving. ![Check tab](docs/images/check.png) |
-| **Help:** every underlined word opens a plain explanation. ![Help panel](docs/images/help.png) | **Company defaults:** rules inherited by every project, with locked minimums and blocked sources. ![Company tab](docs/images/company.png) |
-
-<p align="center"><img src="docs/images/mobile.png" width="300" alt="The editor on a phone"><br><em>Works on a phone too, so you can approve and check from anywhere.</em></p>
+| **Team:** each session's job, limits, tools, and the GitHub links you prefer for it. Every link is checked as you type (official, trust check, blocked, invalid). ![Team tab](docs/images/team.png) | **Rules:** the full grid of who approves in each lane, extra checks for sensitive files, which of your words may be relayed, and presets. ![Rules tab](docs/images/rules.png) |
+| **Status:** problems in the flow (*Must fix* items block saving) and every piece of work with the approvals still missing. ![Status tab](docs/images/status.png) | **Company:** rules inherited by every project, with locked minimums and blocked sources. ![Company tab](docs/images/company.png) |
+| **Help:** every underlined word opens a plain explanation. ![Help panel](docs/images/help.png) | <p align="center"><img src="docs/images/mobile.png" width="260" alt="The editor on a phone"><br><em>Works on a phone too: the palette becomes a strip, and the canvas scrolls on its own.</em></p> |
 
 ### What a session sees in the terminal
 
@@ -332,7 +359,7 @@ node .bootstrap/bin/adapt.mjs cursor
 
 Each session is permanent and nested under the Chief of Staff wherever the tool supports it. Its first
 message is its role file plus `bootstrap brief <role>`: only its own rules, in full with their reasons.
-Rename sessions, add your own, or fold roles together in the editor.
+Rename sessions, add your own, or fold roles together in the editor. On the canvas, drag a session onto the flow to give it a step, or onto a checkpoint to make it a reviewer.
 
 ## Light on tokens
 
@@ -357,7 +384,7 @@ How it stays light:
 | Command | What it does | Who |
 |---|---|---|
 | `bootstrap init --size … --live … --dev …` | set up a project (never overwrites) | owner / Claude |
-| `bootstrap flow --open` | visual editor: lanes, sessions, gates, words, presets, company | owner |
+| `bootstrap flow --open` | visual editor: drag-and-drop canvas, change simulator, team, rules, status, company | owner |
 | `bootstrap brief <role>` | that role's rules and its part in the flow | Chief of Staff, at session start |
 | `bootstrap role <role>` | mark a worktree's session and apply its limits | each session, once |
 | `bootstrap piece <id> --suggest` / `--lane <lane>` | suggest / set a piece's lane | Chief of Staff |
@@ -395,7 +422,7 @@ The pre-push check works everywhere, because git runs it. Details and sources: [
 **Is it slow or heavy?** A session start costs about 2,000 tokens, and the guard adds about 0.1 seconds per
 command. For small projects, `--size prototype` or `small` uses a lighter flow.
 
-**Can I relax the rules?** Yes. Untick checks in the editor, switch presets, or add your own lanes. The
+**Can I relax the rules?** Yes. Drag a reviewer's face off a checkpoint, switch presets, or add your own lanes. The
 Check tab warns you when a change leaves code unreviewed. Only company 🔒 minimums can't be loosened.
 
 **What if a session ignores the rules?** Then its push is refused, with the reason. The rules that matter are
@@ -423,7 +450,7 @@ roles/                          one brief per session
 templates/                      AGENTS.md, board, register, memory, lesson
 githooks/pre-push · hooks/      the push check · the Claude Code guard hook
 docs/                           compatibility matrix, playbook, screenshots
-tests/                          npm test (58 tests)
+tests/                          npm test (63 tests)
 ```
 
 ## Contributing

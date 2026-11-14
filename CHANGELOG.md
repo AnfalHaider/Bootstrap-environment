@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 — 2026-11-15
+
+- **Drag-and-drop flow canvas** replaces the Flow form. Drop sessions onto the flow or onto a step (side by side), link steps by dragging the ● dot, drag reviewers onto or off a checkpoint (🔒 company minimums refuse), use the bin, undo/redo, zoom and Fit, and keyboard moves. Mouse, pen and touch all work.
+- **Side-by-side steps** (`with_previous`) in the flow model, drawn as fan-out and fan-in in `docs/flow.md`. Enforcement is unchanged: only gates and the owner's words are checked.
+- **"Try a change"** simulator backed by a new `/api/simulate` endpoint that uses the push check's own logic.
+- **First-run wizard** (three questions → preset), a "Start over" button, and five tabs: Flow, Team, Status, Rules, Company. Links like `#simulate/sensitive,screens` and `#wizard` open straight to those views.
+- `bootstrap role` now also switches off account-wide plugins outside a session's kit, confirmed against Claude Code 2.1.321.
+- README: new screenshots and a section for each part of the editor. 5 new tests (63 in total).
+
 ## 0.4.0 — 2026-11-12
 
 - **Per-role briefs** (`bootstrap brief <role>`): each session's first message holds only its own rules, in full with their reasons, plus its part in the flow. The rules live once in `flow/rules.json`. A session start goes from ~7,000 to ~2,000 tokens.

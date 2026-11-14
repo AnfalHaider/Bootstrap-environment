@@ -4,7 +4,7 @@ description: Set up any project's agent environment and run it with a session fa
 license: MIT
 compatibility: Needs git and Node 18+ for the bundled tools. Full enforcement in Claude Code; adapters for Cursor, Codex, Copilot, Antigravity, Devin, Kiro, OpenCode, Cline, Aider and ChatGPT degrade as documented in references/adapters.md.
 metadata:
-  version: 0.4.0
+  version: 0.5.0
   repository: https://github.com/AnfalHaider/Bootstrap-environment
 ---
 

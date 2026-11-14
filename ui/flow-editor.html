@@ -9,7 +9,7 @@
   --paper:#F7F6F2;--card:#fff;--ink:#1F1D1A;--ink2:#55514A;--ink3:#7A756C;--line:#DDD9D0;--line2:#C7C2B6;
   --accent:#9A3B1E;--accent-soft:#F3E2DA;--ok:#2C6E49;--ok-soft:#E1F0E6;--warn:#8A5A00;--warn-soft:#FBEFD5;--bad:#A12C2C;--bad-soft:#F7E0E0;
   --display:Georgia,"Times New Roman",serif;--text:"Segoe UI",system-ui,-apple-system,sans-serif;--mono:Consolas,"SF Mono",ui-monospace,monospace;
-  --r-core:#9A3B1E;--r-review:#2D4B7A;--r-docs:#5B6B3A;--r-ops:#6A4C93;--r-owner:#1F1D1A;--r-custom:#7A756C;
+  --r-core:#9A3B1E;--r-review:#2D4B7A;--r-docs:#5B6B3A;--r-ops:#6A4C93;--r-owner:#1F1D1A;--r-custom:#7A756C;--glow:#E8B04B;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#121210;--card:#1B1B18;--ink:#ECE9E2;--ink2:#B8B3A8;--ink3:#8E897E;--line:#2C2B27;--line2:#3C3A34;--accent:#E07A52;--accent-soft:#3A2419;--ok:#6BC28E;--ok-soft:#16281D;--warn:#E8C778;--warn-soft:#2E2614;--bad:#F08A8A;--bad-soft:#341818;--r-core:#E07A52;--r-review:#8FB0E8;--r-docs:#A9BF7A;--r-ops:#B79BE0;--r-owner:#ECE9E2;color-scheme:dark}}
@@ -33,12 +33,78 @@ textarea{width:100%;resize:vertical;font:12.5px/1.5 var(--mono)}
 .badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:500;border:0}
 .b-ok{background:var(--ok-soft);color:var(--ok)}.b-warn{background:var(--warn-soft);color:var(--warn)}.b-bad{background:var(--bad-soft);color:var(--bad)}.b-mute{background:var(--line);color:var(--ink2)}
 button.badge{cursor:pointer}
-.shell{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:calc(100vh - 62px)}
-nav{border-right:1px solid var(--line);padding:12px 8px;display:flex;flex-direction:column;gap:2px;background:var(--card)}
-nav button{all:unset;cursor:pointer;padding:8px 12px;border-radius:8px;display:flex;justify-content:space-between;gap:8px;color:var(--ink2)}
-nav button[aria-selected=true]{background:var(--accent-soft);color:var(--ink);font-weight:600}
-nav button:focus-visible,.stage:focus-visible{outline:2px solid var(--accent)}
+.tabs{display:flex;gap:2px;overflow-x:auto;max-width:100%}
+.tabs button{all:unset;cursor:pointer;padding:6px 12px;border-radius:8px;color:var(--ink2);white-space:nowrap;display:inline-flex;gap:6px}
+.tabs button[aria-selected=true]{background:var(--accent-soft);color:var(--ink);font-weight:600}
+.tabs button:focus-visible,.node:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 main{padding:20px clamp(16px,3vw,32px) 60px;min-width:0}
+main.flowmain{padding:0}
+/* ---------- canvas ---------- */
+.flowgrid{display:grid;grid-template-columns:184px minmax(0,1fr) 290px;min-height:calc(100vh - 64px)}
+.palette{background:var(--card);border-right:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;-webkit-user-select:none;user-select:none}
+.ph{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);margin-top:6px}
+.pchip{display:flex;align-items:center;gap:8px;padding:6px 9px;border:1px solid var(--line);border-radius:10px;background:var(--paper);cursor:grab;touch-action:none;font-size:13px}
+.pchip.block{border-style:dashed}
+.pchip .face{width:22px;height:22px;font-size:10px}
+.trash{margin-top:auto;border:2px dashed var(--line2);border-radius:10px;padding:12px;text-align:center;color:var(--ink3);font-size:12.5px}
+.trash.over{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
+.cmain{min-width:0;padding:14px 18px 30px;display:flex;flex-direction:column;gap:10px}
+.zoom{display:flex;gap:4px;align-items:center}
+.zoom span{font-size:12px;color:var(--ink3);min-width:38px;text-align:center}
+.hintbar{font-size:12.5px;color:var(--ink2);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.canvaswrap{position:relative;overflow-x:auto;overflow-y:hidden;background:radial-gradient(circle,var(--line) 1px,transparent 1px) 0 0/18px 18px,var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 18px 30px;min-height:320px;-webkit-user-select:none;user-select:none}
+.canvas{position:relative;display:flex;align-items:center;min-width:max-content}
+svg.links{position:absolute;inset:0;pointer-events:none;overflow:visible}
+svg.links path{fill:none;stroke:var(--line2);stroke-width:2}
+svg.links path.hot{stroke:var(--glow);stroke-width:3}
+svg.links path.temp{stroke:var(--accent);stroke-dasharray:6 5}
+.col{display:flex;flex-direction:column;gap:14px;padding:4px 0;border-radius:12px}
+.col.group{background:color-mix(in srgb,var(--accent-soft) 55%,transparent);padding:10px;outline:1px dashed var(--line2)}
+.glabel{font-size:11px;color:var(--ink3);text-align:center;margin-top:-4px}
+.gap{width:46px;align-self:stretch;display:flex;align-items:center;justify-content:center;position:relative}
+.gap .plus{width:22px;height:22px;border-radius:50%;border:1px solid var(--line2);background:var(--card);color:var(--ink3);font-size:15px;line-height:19px;padding:0;cursor:pointer;z-index:2;opacity:0;transition:opacity .15s}
+.canvaswrap:hover .gap .plus,.gap .plus:focus-visible{opacity:1}
+.gap.over::before{content:"";position:absolute;top:8%;bottom:8%;left:50%;width:4px;margin-left:-2px;border-radius:4px;background:var(--accent)}
+.node{position:relative;width:158px;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--rc,var(--line2));border-radius:12px;padding:9px 11px 10px;cursor:grab;touch-action:none;box-shadow:0 1px 2px rgba(0,0,0,.05);transition:box-shadow .15s}
+.node.sel{box-shadow:0 0 0 2px var(--accent)}
+.node.over{box-shadow:0 0 0 3px var(--accent)}
+.node.lit{box-shadow:0 0 0 3px var(--glow),0 0 18px color-mix(in srgb,var(--glow) 50%,transparent)}
+.node.dim{opacity:.45}
+.node.dragging{opacity:.35}
+.node .who{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)}
+.node .t{font-weight:600;margin-top:2px}
+.node .p{font-size:12px;color:var(--ink2)}
+.node.word{border:2px solid var(--r-owner);background:transparent}
+.node.gate{border:2px dashed var(--accent);background:var(--accent-soft)}
+.node.live{border:2px solid var(--ok);background:var(--ok-soft)}
+.handle{position:absolute;right:-8px;top:50%;margin-top:-8px;width:16px;height:16px;border-radius:50%;background:var(--card);border:2px solid var(--accent);cursor:crosshair;touch-action:none;z-index:3}
+.faces{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.face{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;background:var(--rc,var(--ink3));cursor:grab;touch-action:none;position:relative;flex:none}
+.face.locked::after{content:"🔒";position:absolute;right:-5px;bottom:-5px;font-size:10px}
+.face.extra{background:transparent;color:var(--ink);border:2px dashed var(--glow)}
+.facedrop{font-size:11px;color:var(--ink3);margin-top:4px}
+.ghost{position:fixed;pointer-events:none;z-index:50;opacity:.9;transform:translate(-50%,-50%) rotate(-2deg)}
+.side{background:var(--card);border-left:1px solid var(--line);padding:12px 14px 30px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.sh{font:600 12px var(--text);text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);margin:6px 0 0}
+.field{display:grid;gap:4px}
+.field label{font-size:12px;font-weight:600;color:var(--ink3)}
+.aplist{display:grid;gap:6px}
+.aprow{display:flex;align-items:center;gap:8px}
+.aprow .btn{margin-left:auto}
+.sim{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:8px;background:var(--paper)}
+.sim label{display:flex;gap:8px;align-items:center;font-size:13px}
+.result{border-radius:10px;padding:9px 11px;font-size:13px}
+.result.ok{background:var(--ok-soft);color:var(--ok)}
+.result.wait{background:var(--warn-soft);color:var(--warn)}
+.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:70;padding:16px}
+.dialog{background:var(--card);border-radius:16px;max-width:520px;width:100%;padding:20px 22px;display:grid;gap:14px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.dialog h2{margin:0}
+.opts{display:grid;gap:8px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line2);border-radius:10px;padding:9px 11px;cursor:pointer}
+.opt:has(input:checked){border:2px solid var(--accent);padding:8px 10px}
+.opt small{display:block;color:var(--ink3)}
 h2{font:600 22px var(--display);margin:0 0 4px}
 h3{margin:18px 0 8px;font-size:15px}
 .lead{color:var(--ink2);margin:0 0 16px;max-width:78ch}
@@ -118,10 +184,17 @@ tr:last-child td{border-bottom:0}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 @media (max-width:760px){.steps{grid-template-columns:1fr}}
 footer{font-size:12.5px;color:var(--ink3);margin-top:22px}
+@media (max-width:1000px){.flowgrid{grid-template-columns:170px minmax(0,1fr)}.side{grid-column:1/-1;border-left:0;border-top:1px solid var(--line)}}
 @media (max-width:760px){
-  .shell{grid-template-columns:1fr}
-  nav{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px}
-  nav button{white-space:nowrap}
+  header{gap:6px 8px;padding:8px 12px}
+  header .proj,#wizardBtn,#themeBtn{display:none}
+  #undoBtn,#redoBtn{font-size:0;padding:5px 10px}
+  #undoBtn::before{content:"↶";font-size:16px}
+  #redoBtn::before{content:"↷";font-size:16px}
+  .flowgrid{grid-template-columns:1fr}
+  .palette{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}
+  .palette .ph{display:none}
+  .pchip,.trash{flex:none;margin:0}
   .split,.form,.grid2{grid-template-columns:1fr}
   .rolelist{flex-direction:row;overflow-x:auto}
   .rolelist button.r{white-space:nowrap}
@@ -132,18 +205,27 @@ footer{font-size:12.5px;color:var(--ink3);margin-top:22px}
 <body>
 <header>
   <div><h1 id="title">Flow editor</h1><div class="proj" id="proj">loading…</div></div>
+  <nav class="tabs" role="tablist" aria-label="Sections" id="nav"></nav>
   <div class="sp"></div>
   <span id="inherits"></span>
   <span id="checkBadge" class="badge b-mute">checking…</span>
+  <button class="btn" id="undoBtn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+  <button class="btn" id="redoBtn" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
+  <button class="btn" id="wizardBtn" title="Answer three questions to pick a starting flow">Start over</button>
   <button class="btn" id="helpBtn" aria-haspopup="dialog">? Help</button>
   <button class="btn" id="themeBtn" aria-label="Toggle light or dark theme">◐</button>
   <button class="btn primary" id="saveBtn" disabled>Save</button>
 </header>
-<div class="shell">
-  <nav role="tablist" aria-label="Sections" id="nav"></nav>
-  <main id="main"></main>
-</div>
+<main id="main"></main>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div class="modal" id="wizard" role="dialog" aria-modal="true" aria-labelledby="wzTitle" hidden>
+  <div class="dialog">
+    <div class="hint" id="wzStep">Question 1 of 3</div>
+    <h2 id="wzTitle"></h2>
+    <div class="opts" id="wzOpts"></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" id="wzSkip">Skip</button><button class="btn primary" id="wzNext">Next</button></div>
+  </div>
+</div>
 <aside id="drawer" class="drawer" role="dialog" aria-modal="false" aria-labelledby="drawerTitle" hidden>
   <header><h1 id="drawerTitle" style="font-size:18px">Help: words used here</h1><div class="sp"></div><button class="btn" id="drawerClose" aria-label="Close help">✕</button></header>
   <div class="body" id="drawerBody"></div>
@@ -203,7 +285,9 @@ function L() { if (!isCompany()) return S.project; S.company.defaults ||= {}; re
 function laneEdit(id) {
   const l = L(); l.lanes ||= [];
   let x = l.lanes.find((y) => y.id === id && !y.removed);
-  if (!x) { x = JSON.parse(JSON.stringify(S.flow.lanes.find((y) => y.id === id))); l.lanes = l.lanes.filter((y) => y.id !== id); l.lanes.push(x); }
+  const eff = S.flow.lanes.find((y) => y.id === id);
+  if (!x) { x = JSON.parse(JSON.stringify(eff)); l.lanes = l.lanes.filter((y) => y.id !== id); l.lanes.push(x); }
+  else if (!x.stages) Object.assign(x, { ...JSON.parse(JSON.stringify(eff)), ...x, stages: JSON.parse(JSON.stringify(eff.stages)) });
   return x;
 }
 function roleEdit(id) { const l = L(); l.roles ||= {}; return (l.roles[id] ||= {}); }
@@ -219,64 +303,289 @@ function changed(now = false) {
   if (now) run(); else checkTimer = setTimeout(run, 250);
 }
 
-// ---------------- views ----------------
-function stageCard(s, i) {
-  const cur = stageSel === i ? 'true' : 'false';
-  if (s.kind === 'gate') {
-    const l = S.flow.lanes.find((x) => x.id === lane);
-    const who = s.gate === 'dev' ? (l.live_exempt_signoffs ? 'exempt' : (l.dev_signoffs || []).map(rname).join(' · ') || 'nobody') : `record + "${l.live_word || '?'}"`;
-    return `<button class="stage gate" data-act="stage" data-i="${i}" aria-current="${cur}"><div class="who">Gate · ${esc(s.gate)}</div><div class="t">${esc(s.title)}</div><div class="p">${esc(who)}</div></button>`;
+// ---------------- the Flow canvas ----------------
+// A lane is a list of stages; a stage with with_previous runs side by side with the one before it (one column).
+let zoom = 1, autoFit = true, simState = null, simPick = [], simOut = '', hist = [], fut = [], drag = null;
+const ini = (id) => { const w = rname(id).replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/).filter(Boolean); return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || id).slice(0, 2)).toUpperCase(); };
+function colsOf(l) {
+  const cols = [];
+  (l.stages || []).forEach((s, i) => {
+    const prev = cols[cols.length - 1];
+    if (s.with_previous && s.kind === 'stage' && prev && prev[prev.length - 1].s.kind === 'stage') prev.push({ s, i });
+    else cols.push([{ s, i }]);
+  });
+  return cols;
+}
+function viewLane() {
+  const eff = S.flow.lanes.find((x) => x.id === lane);
+  const own = (L().lanes || []).find((x) => x.id === lane && !x.removed && x.stages);
+  return own ? { ...eff, ...own } : eff;
+}
+function lockedFor(l) { const f = S.flow.floor || { signoffs: {} }; return isCompany() || !l ? [] : [...new Set([...(f.signoffs['*'] || []), ...(f.signoffs[l.id] || [])])]; }
+const layerJSON = () => JSON.stringify(isCompany() ? S.company : S.project);
+function snapshot() { hist.push(layerJSON()); if (hist.length > 80) hist.shift(); fut = []; simState = null; }
+function edit(fn, msg) { snapshot(); fn(laneEdit(lane)); changed(true); render(); if (msg) toast(msg); }
+function restore(json) { const v = JSON.parse(json); if (isCompany()) S.company = v; else S.project = v; stageSel = null; changed(true); render(); }
+function undo() { if (!hist.length) return; fut.push(layerJSON()); restore(hist.pop()); toast('Undone.'); }
+function redo() { if (!fut.length) return; hist.push(layerJSON()); restore(fut.pop()); }
+function removeAt(x, i) { const s = x.stages; if (s[i + 1] && s[i + 1].with_previous && !s[i].with_previous) s[i + 1].with_previous = false; s.splice(i, 1); }
+function moveToCol(x, i, c) {
+  const cols = colsOf(x), st = x.stages[i], target = c < cols.length ? cols[c][0].s : null;
+  if (target === st) return;
+  removeAt(x, i); st.with_previous = false;
+  x.stages.splice(target ? x.stages.indexOf(target) : x.stages.length, 0, st);
+}
+function groupWith(x, i, ti) {
+  const col = colsOf(x).find((c) => c.some((e) => e.i === ti)), last = col[col.length - 1].s, st = x.stages[i];
+  removeAt(x, i); st.with_previous = true;
+  x.stages.splice(x.stages.indexOf(last) + 1, 0, st);
+}
+function insertCol(x, c, st) { const cols = colsOf(x); st.with_previous = false; x.stages.splice(c < cols.length ? cols[c][0].i : x.stages.length, 0, st); }
+function newStage(kind, role) {
+  if (kind === 'word') return { kind: 'word', word: 'approve', title: "Owner's approval", produces: 'Words + date on the board' };
+  if (kind === 'gate') return { kind: 'gate', gate: 'dev', title: 'Push to dev' };
+  if (kind === 'live') return { kind: 'gate', gate: 'live', title: 'Push live' };
+  return { kind: 'stage', role, title: 'New step', produces: '' };
+}
+const colIndexOf = (l, i) => colsOf(l).findIndex((c) => c.some((e) => e.i === i));
+
+function face(r, extra, locked) {
+  return `<span class="face ${locked ? 'locked' : ''} ${extra ? 'extra' : ''}" style="--rc:var(--${grp(r)})" data-face="${esc(r)}" title="${esc(rname(r))}${locked ? ' (company minimum)' : ''}${extra ? ' (added by what the change touches)' : ''}" aria-label="${esc(rname(r))} must approve">${esc(ini(r))}</span>`;
+}
+function nodeHtml(s, i, l) {
+  const lit = simState ? (simState.lit.includes(i) ? ' lit' : ' dim') : '';
+  const cls = `node${stageSel === i ? ' sel' : ''}${lit}`;
+  if (s.kind === 'gate' && s.gate === 'dev') {
+    const locked = lockedFor(l), extra = simState ? simState.extra.filter((r) => !(l.dev_signoffs || []).includes(r)) : [];
+    const faces = l.live_exempt_signoffs ? '<span class="hint">exempt: live breakage only</span>'
+      : ((l.dev_signoffs || []).map((r) => face(r, false, locked.includes(r))).join('') + extra.map((r) => face(r, true)).join('')) || '<span class="hint">nobody yet</span>';
+    return `<div data-node="${i}" tabindex="0" class="${cls} gate" aria-label="Checkpoint before dev"><div class="who">🚧 Checkpoint</div><div class="t">${esc(s.title)}</div><div class="faces">${faces}</div><div class="facedrop">Drop a session here to require it</div><span class="handle" data-handle="${i}" title="Drag to link"></span></div>`;
   }
-  if (s.kind === 'word') return `<button class="stage word" data-act="stage" data-i="${i}" aria-current="${cur}"><div class="who">Owner's word</div><div class="t">${esc(s.title)}</div><div class="p">${esc(s.produces || '')}</div></button>`;
-  return `<button class="stage" style="--rc:var(--${grp(s.role)})" data-act="stage" data-i="${i}" aria-current="${cur}"><div class="who"><span class="dot"></span>${esc(rname(s.role))}</div><div class="t">${esc(s.title)}</div><div class="p">${esc(s.produces || '')}</div>${s.note ? `<div><span class="tag cond">${esc(s.note)}</span></div>` : ''}</button>`;
+  if (s.kind === 'gate') return `<div data-node="${i}" tabindex="0" class="${cls} live" aria-label="Go live"><div class="who">🌐 Live</div><div class="t">${esc(s.title)}</div><div class="p">Needs "${esc(l.live_word || '?')}" + a release record</div><span class="handle" data-handle="${i}" title="Drag to link"></span></div>`;
+  if (s.kind === 'word') return `<div data-node="${i}" tabindex="0" class="${cls} word" aria-label="Your word: ${esc(s.word)}"><div class="who">🗣️ Your word</div><div class="t">${esc(s.title)}</div><div class="p">${esc(s.produces || 'Needed from you here')}</div><span class="handle" data-handle="${i}" title="Drag to link"></span></div>`;
+  return `<div data-node="${i}" tabindex="0" class="${cls}" style="--rc:var(--${grp(s.role)})" aria-label="${esc(rname(s.role))}: ${esc(s.title)}"><div class="who"><span class="dot"></span>${esc(rname(s.role))}</div><div class="t">${esc(s.title)}</div><div class="p">${esc(s.produces || '')}</div>${s.note ? `<div class="p" style="color:var(--warn)">${esc(s.note)}</div>` : ''}<span class="handle" data-handle="${i}" title="Drag to link"></span></div>`;
 }
-function stageEditor(l) {
-  const s = l.stages[stageSel]; if (!s) return '';
-  const roles = Object.values(S.flow.roles).map((r) => `<option value="${esc(r.id)}" ${r.id === s.role ? 'selected' : ''}>${esc(r.name)}</option>`).join('');
-  const words = Object.keys(S.flow.words).map((w) => `<option ${w === s.word ? 'selected' : ''}>${esc(w)}</option>`).join('');
-  return `<div class="panel" style="margin-top:4px"><div class="form">
-    <div class="full"><b>Editing step ${stageSel + 1} of ${l.stages.length}</b></div>
-    <label for="st-kind">Kind</label><div><select id="st-kind" data-act="st" data-k="kind"><option value="stage" ${s.kind === 'stage' ? 'selected' : ''}>Stage (a session's work)</option><option value="word" ${s.kind === 'word' ? 'selected' : ''}>Owner's word</option><option value="gate" ${s.kind === 'gate' ? 'selected' : ''}>Gate (push)</option></select>
-      <div class="hint">${s.kind === 'gate' ? 'A checkpoint. Who must approve at the dev gate is set on the Gates &amp; words tab.' : s.kind === 'word' ? 'A point where you must answer. Drawn so every session can see where your word is needed.' : 'Work one session does, like research, design, tests or the build.'}</div></div>
-    ${s.kind === 'stage' ? `<label for="st-role">Session</label><select id="st-role" data-act="st" data-k="role">${roles}</select>` : ''}
-    ${s.kind === 'word' ? `<label for="st-word">Word</label><select id="st-word" data-act="st" data-k="word">${words}</select>` : ''}
-    ${s.kind === 'gate' ? `<label for="st-gate">Gate</label><select id="st-gate" data-act="st" data-k="gate"><option value="dev" ${s.gate === 'dev' ? 'selected' : ''}>Push to dev</option><option value="live" ${s.gate === 'live' ? 'selected' : ''}>Push live</option></select>` : ''}
-    <label for="st-title">Title</label><input type="text" id="st-title" data-act="st" data-k="title" value="${esc(s.title)}">
-    <label for="st-produces">Produces</label><input type="text" id="st-produces" data-act="st" data-k="produces" value="${esc(s.produces || '')}">
-    <label for="st-note">Note</label><input type="text" id="st-note" data-act="st" data-k="note" value="${esc(s.note || '')}" placeholder="e.g. skip if no screen changed">
-    <div class="full row"><button class="btn small" data-act="mv" data-d="-1">← Move left</button><button class="btn small" data-act="mv" data-d="1">Move right →</button><button class="btn small danger" data-act="delstage">Remove stage</button></div>
-  </div></div>`;
+function sidePanel(l) {
+  if (!l) return '';
+  const s = stageSel !== null ? l.stages[stageSel] : null;
+  if (!s) {
+    return `<h3 class="sh">Lane: ${esc(l.name)}</h3>
+    <div class="field"><label for="ln-name">Lane name</label><input type="text" id="ln-name" data-act="ln" data-k="name" value="${esc(l.name)}"></div>
+    <div class="field"><label for="ln-when">Used when</label><input type="text" id="ln-when" data-act="ln" data-k="when" value="${esc(l.when || '')}"><div class="hint">Which kind of work takes this lane, in plain words. The Chief of Staff reads it.</div></div>
+    <div class="field"><label for="ln-before">Your word before building</label><select id="ln-before" data-act="ln" data-k="require_word"><option value="">Not needed</option><option value="approve" ${l.require_word === 'approve' ? 'selected' : ''}>approve: you approve the design or plan</option><option value="go" ${l.require_word === 'go' ? 'selected' : ''}>go: you say go before risky work</option></select><div class="hint">If set, code from this lane is refused until your word is on record.</div></div>
+    <div class="field"><label for="ln-word">Your word to go live</label><select id="ln-word" data-act="ln" data-k="live_word"><option value="">none</option>${Object.keys(S.flow.words).map((w) => `<option ${w === l.live_word ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select></div>
+    <div class="hint">Lane id <code>${esc(l.id)}</code>. The Chief of Staff routes work here with <code>bootstrap piece R12 --lane ${esc(l.id)}</code>.</div>
+    <div><button class="btn small danger" data-act="dellane">Remove this lane</button></div>
+    <p class="hint">Click a step on the canvas to edit it.</p>`;
+  }
+  const head = s.kind === 'gate' ? (s.gate === 'dev' ? '🚧 Checkpoint' : '🌐 Go live') : s.kind === 'word' ? '🗣️ Your word' : 'Step';
+  let body = '';
+  if (s.kind === 'stage') body += `<div class="field"><label for="st-role">Who does it</label><select id="st-role" data-act="st" data-k="role">${Object.values(S.flow.roles).map((r) => `<option value="${esc(r.id)}" ${r.id === s.role ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></div>`;
+  if (s.kind === 'word') body += `<div class="field"><label for="st-word">Which word</label><select id="st-word" data-act="st" data-k="word">${[['approve', 'approve: you approve the design or plan'], ['go', 'go: you say go before risky work'], ['release', 'release: put it live'], ['apply', 'apply: put an urgent fix live']].map(([w, t]) => `<option value="${w}" ${w === s.word ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`;
+  if (s.kind === 'gate' && s.gate === 'dev') {
+    const locked = lockedFor(l);
+    body += `<p class="hint">Code joins dev only when everyone below has approved that exact version, with evidence.</p>
+    ${l.live_exempt_signoffs ? '<p class="hint">This lane is exempt (live breakage only).</p>' : `<div class="aplist">${(l.dev_signoffs || []).map((r) => `<div class="aprow">${face(r, false, locked.includes(r))}<span>${esc(rname(r))}</span>${locked.includes(r) ? '<span class="hint">🔒 company minimum</span>' : `<button class="btn small" data-act="aprm" data-r="${esc(r)}">Remove</button>`}</div>`).join('') || '<span class="hint">Nobody yet.</span>'}</div>
+    <div class="field"><label for="apadd">Add an approver</label><select id="apadd" data-act="apadd"><option value="">Choose…</option>${Object.values(S.flow.roles).filter((r) => !(l.dev_signoffs || []).includes(r.id)).map((r) => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></div>`}`;
+  }
+  body += `<div class="field"><label for="st-title">Title</label><input type="text" id="st-title" data-act="st" data-k="title" value="${esc(s.title)}"></div>`;
+  if (s.kind !== 'gate') body += `<div class="field"><label for="st-produces">What it produces</label><input type="text" id="st-produces" data-act="st" data-k="produces" value="${esc(s.produces || '')}"></div>`;
+  if (s.kind === 'stage') body += `<div class="field"><label for="st-note">Note</label><input type="text" id="st-note" data-act="st" data-k="note" value="${esc(s.note || '')}" placeholder="e.g. skip if no screen changed"></div>`;
+  if (s.kind === 'stage' && stageSel > 0 && l.stages[stageSel - 1].kind === 'stage') body += `<label class="row" style="gap:6px"><input type="checkbox" data-act="side" ${s.with_previous ? 'checked' : ''}> Runs side by side with the step before</label>`;
+  return `<h3 class="sh">${head}</h3>${body}
+    <div class="row"><button class="btn small" data-act="mv" data-d="-1">← Earlier</button><button class="btn small" data-act="mv" data-d="1">Later →</button><button class="btn small danger" data-act="delstage">Remove</button><button class="btn small" data-act="desel">Done</button></div>`;
 }
+function simPanel() {
+  return `<h3 class="sh">Try a change</h3><div class="sim"><span class="hint">Tick what a change touches. See its path, who must approve, and whether a push would get through.</span>
+  ${S.flow.conditions.map((c) => `<label><input type="checkbox" data-sim="${esc(c.id)}" ${simPick.includes(c.id) ? 'checked' : ''}> ${esc(c.label)}</label>`).join('')}
+  <label><input type="checkbox" data-sim="__docs" ${simPick.includes('__docs') ? 'checked' : ''}> Docs only</label>
+  <button class="btn primary" data-act="simrun">Show me</button><div id="simOut" aria-live="polite">${simOut}</div></div>`;
+}
+function canvasView() {
+  if (!lane || !S.flow.lanes.some((l) => l.id === lane)) lane = S.flow.lanes[0] && S.flow.lanes[0].id;
+  const l = lane && viewLane();
+  const pal = Object.values(S.flow.roles).map((r) => `<div class="pchip" data-role="${esc(r.id)}" tabindex="0" title="Drag onto the flow, or onto a checkpoint"><span class="face" style="--rc:var(--${grp(r.id)})">${esc(ini(r.id))}</span>${esc(r.name)}</div>`).join('');
+  let canvas = '<svg class="links" id="links"></svg>';
+  if (l) {
+    const cols = colsOf(l);
+    canvas += '<div class="gap" data-gap="0"></div>';
+    cols.forEach((col, c) => {
+      canvas += `<div class="col${col.length > 1 ? ' group' : ''}">${col.map((e) => nodeHtml(e.s, e.i, l)).join('')}${col.length > 1 ? '<div class="glabel">side by side</div>' : ''}</div>`;
+      canvas += `<div class="gap" data-gap="${c + 1}">${c < cols.length - 1 ? `<button class="plus" data-act="plus" data-c="${c + 1}" aria-label="Insert a step here">+</button>` : ''}</div>`;
+    });
+  }
+  return `<div class="flowgrid">
+  <aside class="palette" aria-label="Drag onto the flow"><div class="ph">Sessions</div>${pal}<div class="ph">Steps</div>
+    <div class="pchip block" data-new="word" tabindex="0">🗣️ Your word</div><div class="pchip block" data-new="gate" tabindex="0">🚧 Checkpoint</div><div class="pchip block" data-new="live" tabindex="0">🌐 Go live</div>
+    <div class="trash" id="trash">🗑 Drop here to remove</div></aside>
+  <section class="cmain">
+    <div class="row" style="justify-content:space-between"><div class="row" role="group" aria-label="Lanes">${S.flow.lanes.map((x) => `<button class="chip" aria-pressed="${x.id === lane}" data-act="lane" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join('')}<button class="chip add" data-act="addlane">+ Lane</button></div>
+      <div class="zoom"><button class="btn small" data-act="zout" aria-label="Zoom out">−</button><span id="zval">${Math.round(zoom * 100)}%</span><button class="btn small" data-act="zin" aria-label="Zoom in">+</button><button class="btn small" data-act="zfit">Fit</button></div></div>
+    <div class="hintbar">Drag a session onto a <b>line</b> to add a step · drop it <b>on a step</b> to run side by side · drag a step's <b>● dot</b> to another step to link them · drag a session onto a ${term('gate', 'checkpoint')} to require its ${term('signoff', 'sign-off')}.</div>
+    <div class="canvaswrap" id="wrap"><div class="canvas" id="canvas" style="zoom:${zoom}">${canvas}</div></div>
+    <div class="legend"><span><span class="dot" style="--rc:var(--r-docs)"></span>writes, researches, designs</span><span><span class="dot" style="--rc:var(--r-core)"></span>builds</span><span><span class="dot" style="--rc:var(--r-review)"></span>checks and reviews</span><span><span class="dot" style="--rc:var(--r-ops)"></span>releases</span><span>🔒 company minimum</span><span>Keyboard: Tab to a step, ← → to move, Delete to remove</span></div>
+  </section>
+  <section class="side" aria-label="Details">${sidePanel(l)}${simPanel()}</section></div>`;
+}
+function applyZoom() { const c = $('#canvas'); if (!c) return; c.style.zoom = zoom; const z = $('#zval'); if (z) z.textContent = Math.round(zoom * 100) + '%'; drawLinks(); }
+function fitZoom() { const c = $('#canvas'), w = $('#wrap'); if (!c || !w) return; c.style.zoom = 1; zoom = Math.max(0.7, Math.min(1, (w.clientWidth - 40) / c.scrollWidth)); }
+function drawLinks(temp) {
+  const svg = $('#links'), c = $('#canvas'), l = lane && viewLane(); if (!svg || !c || !l) return;
+  const base = c.getBoundingClientRect(), k = zoom;
+  const ns = colsOf(l).map((col) => col.map((e) => c.querySelector(`[data-node="${e.i}"]`)));
+  let d = '';
+  for (let i = 0; i < ns.length - 1; i++) for (const a of ns[i]) for (const b of ns[i + 1]) {
+    if (!a || !b) continue;
+    const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    const x1 = (ra.right - base.left) / k, y1 = (ra.top + ra.height / 2 - base.top) / k, x2 = (rb.left - base.left) / k, y2 = (rb.top + rb.height / 2 - base.top) / k;
+    const hot = simState && simState.lit.includes(+a.dataset.node) && simState.lit.includes(+b.dataset.node);
+    d += `<path class="${hot ? 'hot' : ''}" d="M${x1},${y1} C${x1 + 26},${y1} ${x2 - 26},${y2} ${x2},${y2}"/>`;
+  }
+  if (temp) d += `<path class="temp" d="M${temp[0]},${temp[1]} L${temp[2]},${temp[3]}"/>`;
+  svg.innerHTML = d; svg.setAttribute('width', c.scrollWidth); svg.setAttribute('height', c.scrollHeight);
+}
+async function runSim() {
+  const docs = simPick.includes('__docs'), condIds = simPick.filter((x) => x !== '__docs');
+  let r;
+  try { r = await api('/api/simulate', { ...(isCompany() ? { company: S.company } : { project: S.project }), condIds, docsOnly: docs && !condIds.length }); }
+  catch (e) { return toast(`Could not simulate: ${e.message}`); }
+  if (r.docsOnly) { simState = null; simOut = '<div class="result ok">Docs-only changes skip the checkpoint and are accepted at once.</div>'; return render(); }
+  const laneName = (S.flow.lanes.find((x) => x.id === r.lane) || {}).name || r.lane;
+  if (r.lane !== lane) { lane = r.lane; stageSel = null; toast(`This change goes down the ${laneName} lane.`); }
+  simState = { lit: [], extra: r.added };
+  simOut = `<div class="result wait"><b>${esc(laneName)} lane.</b> Before it can join dev: approval from <b>${esc(r.required.map(rname).join(', ') || 'nobody')}</b>${r.added.length ? ' (the dashed faces were added by what it touches)' : ''}.<br>Your words: <b>${esc(r.words.join(', ') || 'none')}</b>.<br>If anything is missing when a session pushes, the push is refused and the reason is shown.</div>`;
+  render();
+  const cols = colsOf(viewLane()); let k = 0;
+  const step = () => { if (!simState || k >= cols.length) return; simState.lit.push(...cols[k++].map((e) => e.i)); render(); setTimeout(step, 240); };
+  step();
+}
+
+// pointer-based drag: works with a mouse, a pen and touch
+function startDrag(e, info) { drag = { ...info, x0: e.clientX, y0: e.clientY, started: false, ghost: null, over: null }; window.addEventListener('pointermove', onDragMove); window.addEventListener('pointerup', onDragUp, { once: true }); }
+function dropTarget(x, y) {
+  const el = document.elementFromPoint(x, y); if (!el) return null;
+  if (el.closest('#trash')) return { type: 'trash', el: $('#trash') };
+  const n = el.closest('[data-node]'); if (n) return { type: 'node', i: +n.dataset.node, el: n };
+  const g = el.closest('[data-gap]'); if (g) return { type: 'gap', c: +g.dataset.gap, el: g };
+  return null;
+}
+function onDragMove(e) {
+  if (!drag) return;
+  if (!drag.started && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
+  if (!drag.started) {
+    drag.started = true;
+    if (drag.type !== 'link') { drag.ghost = drag.src.cloneNode(true); drag.ghost.classList.add('ghost'); drag.ghost.style.width = drag.src.offsetWidth + 'px'; document.body.appendChild(drag.ghost); }
+    if (drag.type === 'move') drag.src.classList.add('dragging');
+  }
+  if (drag.ghost) { drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px'; }
+  document.querySelectorAll('.over').forEach((x) => x.classList.remove('over'));
+  drag.over = dropTarget(e.clientX, e.clientY);
+  if (drag.over && drag.over.el) drag.over.el.classList.add('over');
+  if (drag.type === 'link') { const b = $('#canvas').getBoundingClientRect(), h = drag.src.getBoundingClientRect(); drawLinks([(h.left + h.width / 2 - b.left) / zoom, (h.top + h.height / 2 - b.top) / zoom, (e.clientX - b.left) / zoom, (e.clientY - b.top) / zoom]); }
+  const w = $('#wrap'); if (w) { const r = w.getBoundingClientRect(); if (e.clientX > r.right - 40) w.scrollLeft += 12; else if (e.clientX < r.left + 40) w.scrollLeft -= 12; }
+}
+function onDragUp() {
+  window.removeEventListener('pointermove', onDragMove);
+  const d = drag; drag = null;
+  document.querySelectorAll('.over,.dragging').forEach((x) => x.classList.remove('over', 'dragging'));
+  if (d.ghost) d.ghost.remove();
+  if (!d.started) { if (d.type === 'move') { stageSel = d.i; render(); } return; }
+  const t = d.over, l = viewLane();
+  if (d.type === 'link') {
+    if (t && t.type === 'node' && t.i !== d.i) {
+      const cf = colIndexOf(l, d.i), ct = colIndexOf(l, t.i);
+      if (cf === ct) { drawLinks(); return toast('Those two already run side by side.'); }
+      const a = l.stages[d.i].title, b = l.stages[t.i].title;
+      return edit((x) => moveToCol(x, t.i, cf + 1), `Linked: "${a}" → "${b}"`);
+    }
+    return drawLinks();
+  }
+  if (d.type === 'face') {
+    if (t && t.type === 'node' && t.i === d.gate) return;
+    if (lockedFor(l).includes(d.role)) { const g = document.querySelector(`[data-node="${d.gate}"]`); if (g) g.classList.add('shake'); return toast(`${rname(d.role)} is a company minimum (🔒) and can't be removed here.`); }
+    return edit((x) => { x.dev_signoffs = (x.dev_signoffs || []).filter((r) => r !== d.role); }, `${rname(d.role)} no longer has to approve here.`);
+  }
+  if (!t) return;
+  if (t.type === 'trash') { if (d.type === 'move') edit((x) => { removeAt(x, d.i); stageSel = null; }, 'Step removed. Undo with Ctrl+Z.'); return; }
+  if (t.type === 'node') {
+    const target = l.stages[t.i];
+    if (target.kind === 'gate' && target.gate === 'dev' && d.role) {
+      if (l.live_exempt_signoffs) return toast('This lane is exempt from sign-offs.');
+      if ((l.dev_signoffs || []).includes(d.role)) return toast(`${rname(d.role)} already approves here.`);
+      return edit((x) => { x.dev_signoffs = [...new Set([...(x.dev_signoffs || []), d.role])]; }, `${rname(d.role)} must now approve at this checkpoint.`);
+    }
+    const isStage = d.type === 'new' ? !d.newKind : l.stages[d.i].kind === 'stage';
+    if (target.kind === 'stage' && isStage) {
+      if (d.type === 'move') { if (colIndexOf(l, d.i) === colIndexOf(l, t.i)) return; return edit((x) => groupWith(x, d.i, t.i), 'Now running side by side.'); }
+      return edit((x) => { const col = colsOf(x).find((c) => c.some((e) => e.i === t.i)); const last = col[col.length - 1].s; const st = newStage('stage', d.role); st.with_previous = true; x.stages.splice(x.stages.indexOf(last) + 1, 0, st); stageSel = x.stages.indexOf(st); }, 'Now running side by side. Describe the new step on the right.');
+    }
+    return toast(target.kind === 'gate' && target.gate === 'dev' ? 'Drop a session on a checkpoint to require its sign-off.' : 'Drop on a line to insert, or on a session step to run side by side.');
+  }
+  if (t.type === 'gap') {
+    if (d.type === 'new') return edit((x) => { const st = newStage(d.newKind || 'stage', d.role); insertCol(x, t.c, st); stageSel = x.stages.indexOf(st); }, 'Step added. Describe it on the right.');
+    if (d.type === 'move') return edit((x) => { const st = x.stages[d.i]; moveToCol(x, d.i, t.c); stageSel = x.stages.indexOf(st); }, 'Moved.');
+  }
+}
+document.addEventListener('pointerdown', (e) => {
+  if (!S || tab !== 'flow' || e.button > 0) return;
+  const h = e.target.closest('[data-handle]'); if (h) { e.preventDefault(); return startDrag(e, { type: 'link', i: +h.dataset.handle, src: h }); }
+  const f = e.target.closest('.node [data-face]'); if (f) { e.preventDefault(); return startDrag(e, { type: 'face', role: f.dataset.face, gate: +f.closest('[data-node]').dataset.node, src: f }); }
+  const c = e.target.closest('.palette .pchip'); if (c) { e.preventDefault(); return startDrag(e, { type: 'new', role: c.dataset.role, newKind: c.dataset.new, src: c }); }
+  const n = e.target.closest('[data-node]'); if (n) { e.preventDefault(); n.focus(); return startDrag(e, { type: 'move', i: +n.dataset.node, src: n }); }
+});
+document.addEventListener('keydown', (e) => {
+  if (!S || /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); return e.shiftKey ? redo() : undo(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); return redo(); }
+  const n = document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-node]');
+  if (!n || tab !== 'flow') return;
+  const i = +n.dataset.node, l = viewLane(), c = colIndexOf(l, i);
+  const refocus = (st) => { const idx = viewLane().stages.indexOf(st); const el = document.querySelector(`[data-node="${idx}"]`); if (el) el.focus(); };
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    const g = e.key === 'ArrowRight' ? c + 2 : c - 1; if (g < 0 || g > colsOf(l).length) return;
+    e.preventDefault(); let moved; edit((x) => { moved = x.stages[i]; moveToCol(x, i, g); stageSel = x.stages.indexOf(moved); }); refocus(moved);
+  }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); edit((x) => { removeAt(x, i); stageSel = null; }, 'Step removed. Undo with Ctrl+Z.'); }
+  if (e.key === 'Enter') { stageSel = i; render(); }
+});
+
+// first-run wizard: three plain questions, then a starting flow
+const WZ = [
+  ['What are you building?', [['prototype', 'A prototype or side project', 'Lightest setup: one assistant plays the roles'], ['small', 'A small product', 'A smaller team, still with reviews'], ['live', 'A live product with real users', 'The full team and every check (recommended if money or customer data is involved)']], 2],
+  ['Should risky changes wait for your "go"?', [['yes', 'Yes', 'Login, payment and database changes pause until you say go'], ['no', 'No', 'Reviews only']], 0],
+  ['Does your company have shared rules?', [['no', 'Not yet', 'You can add them later'], ['yes', 'Yes, in a repo or folder', "You'll point to them on the Company tab"]], 0],
+];
+let wz = 0, wzAns = [];
+function openWizard() { wz = 0; wzAns = []; showWz(); $('#wizard').hidden = false; $('#wzNext').focus(); }
+function showWz() {
+  const [q, opts, def] = WZ[wz];
+  $('#wzStep').textContent = `Question ${wz + 1} of ${WZ.length}`;
+  $('#wzTitle').textContent = q;
+  $('#wzOpts').innerHTML = opts.map(([v, t, s], i) => `<label class="opt"><input type="radio" name="wz" value="${v}" ${i === def ? 'checked' : ''}><span><b>${esc(t)}</b><small>${esc(s)}</small></span></label>`).join('');
+  $('#wzNext').textContent = wz === WZ.length - 1 ? 'Build my flow' : 'Next';
+}
+function finishWizard() {
+  snapshot();
+  const p = S.project, size = wzAns[0];
+  p.preset = { prototype: 'solo', small: 'small', live: 'full' }[size]; p.size = size;
+  delete p.lanes;
+  if (wzAns[1] === 'no') p.lanes = [{ id: 'high', require_word: '' }];
+  try { localStorage.setItem('flow-wizard-done', '1'); } catch { /* fine */ }
+  $('#wizard').hidden = true;
+  tab = wzAns[2] === 'yes' ? 'company' : 'flow'; lane = null; stageSel = null; autoFit = true;
+  changed(true);
+  toast(`Starting with the "${S.presets[p.preset].label}" flow. Drag things around to make it yours, then Save.`);
+}
+function wizardNeeded() {
+  if (isCompany()) return false;
+  try { if (localStorage.getItem('flow-wizard-done') === '1') return false; } catch { /* fall through */ }
+  const p = S.project || {};
+  return !p.lanes && !p.roles && !p.conditions && !p.extends;
+}
+
+// ---------------- views ----------------
 const VIEWS = {
-  flow() {
-    if (!lane || !S.flow.lanes.some((l) => l.id === lane)) lane = S.flow.lanes[0] && S.flow.lanes[0].id;
-    const l = S.flow.lanes.find((x) => x.id === lane);
-    if (!l) return `<h2>Flow</h2><p class="lead">No lanes. Add one.</p><button class="chip add" data-act="addlane">+ Add lane</button>`;
-    const welcome = welcomeHidden || isCompany() ? '' : `<section class="welcome" aria-label="Getting started">
-      <h3>New here? This page decides how your AI team works.</h3>
-      <p style="margin:0;color:var(--ink2)">You talk to one assistant, the ${term('chief', 'Chief of Staff')}. It hands work to a team of ${term('session', 'sessions')} (Design, Builder, QA…). This page sets the route every task takes and who must check it. The tools then <b>refuse</b> work that skipped a check, so the rules here actually hold.</p>
-      <div class="steps">
-        <div><b>1 · Pick a starting point</b>The ${term('preset', 'Presets')} tab has ready-made flows. "Full company" suits most live products.</div>
-        <div><b>2 · Adjust if you want</b>Change the ${term('lane', 'lanes')} below, or choose who must approve code on the <i>Gates &amp; words</i> tab.</div>
-        <div><b>3 · Save</b>The ${term('signoff', 'sign-off')} checks start applying once the saved file is committed.</div>
-      </div>
-      <div class="row"><button class="btn small" data-act="hidewelcome">Got it, hide this</button><button class="btn small" data-act="help">Explain the words</button></div>
-    </section>`;
-    return `<h2>Flow</h2>${welcome}
-    ${intro('🛤️', `A ${term('lane', 'lane')} is the route a ${term('piece', 'piece of work')} takes, step by step. Coloured boxes are ${term('stage', 'stages')} (a session does something), dashed boxes are ${term('gate', 'gates')} (checkpoints), and outlined boxes are where ${term('word', 'your word')} is needed. Click any box to change it.`,
-      'Example: in the Normal lane, Research comes first, then Design, then your approval, then tests are written, then the code is built and checked.')}
-    <div class="row" role="group" aria-label="Lanes">${S.flow.lanes.map((x) => `<button class="chip" aria-pressed="${x.id === lane}" data-act="lane" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join('')}<button class="chip add" data-act="addlane">+ Add lane</button></div>
-    <div class="panel" style="margin-top:12px"><div class="form">
-      <label for="ln-name">Lane name</label><div><input type="text" id="ln-name" data-act="ln" data-k="name" value="${esc(l.name)}" style="width:100%"><div class="hint">A short name you'll recognise, like "Risky changes".</div></div>
-      <label for="ln-when">Used when</label><div><input type="text" id="ln-when" data-act="ln" data-k="when" value="${esc(l.when || '')}" style="width:100%"><div class="hint">In plain words, which kind of work goes down this lane. The Chief of Staff reads this when it decides.</div></div>
-      <label for="ln-before">Your word before building</label><div><select id="ln-before" data-act="ln" data-k="require_word"><option value="">Not needed</option><option value="approve" ${l.require_word === 'approve' ? 'selected' : ''}>"approve": you approve the plan or design</option><option value="go" ${l.require_word === 'go' ? 'selected' : ''}>"go": you say go before risky work starts</option></select><div class="hint">If set, code from this lane is refused until your word is on record.</div></div>
-      <label for="ln-word">Your word to go live</label><div><select id="ln-word" data-act="ln" data-k="live_word"><option value="">— none —</option>${Object.keys(S.flow.words).map((w) => `<option ${w === l.live_word ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select><div class="hint">Usually "release". The urgent-fix lane uses "apply".</div></div>
-      <label>Lane id</label><div><code>${esc(l.id)}</code> <button class="btn small danger" data-act="dellane" style="margin-left:6px">Remove lane</button><div class="hint">The Chief of Staff puts work on this lane with <code>bootstrap piece R12 --lane ${esc(l.id)}</code>. Work with no lane set is refused.</div></div>
-    </div></div>
-    <div class="lane" role="list" aria-label="Steps in this lane">${l.stages.map((s, i) => stageCard(s, i) + (i < l.stages.length - 1 ? '<div class="arrow" aria-hidden="true">→</div>' : '')).join('')}<div class="arrow"></div><button class="addstage" data-act="addstage">+ Add step</button></div>
-    <div class="legend" aria-label="Legend"><span><span class="dot" style="--rc:var(--r-docs)"></span>writes, researches, designs</span><span><span class="dot" style="--rc:var(--r-core)"></span>builds</span><span><span class="dot" style="--rc:var(--r-review)"></span>checks and reviews</span><span><span class="dot" style="--rc:var(--r-ops)"></span>releases and runs things</span><span>▭ dashed = checkpoint</span><span>▢ outlined = your word</span></div>
-    ${stageSel !== null ? stageEditor(l) : '<p class="hint" style="margin-top:10px">Tip: click a box to edit, move or remove it. On a phone, swipe the lane sideways.</p>'}`;
-  },
+  flow() { return canvasView(); },
   sessions() {
     if (!S.flow.roles[roleSel]) roleSel = Object.keys(S.flow.roles)[0];
     const r = S.flow.roles[roleSel];
@@ -284,7 +593,7 @@ const VIEWS = {
     const srcText = (Array.isArray(own) ? own : (r.sources || [])).join('\n');
     const list = (r.source_list || []).map((s) => `<div class="src"><div class="row" style="gap:6px"><span class="badge ${s.from === 'company' ? 'b-mute' : !s.ok ? 'b-bad' : s.official ? 'b-ok' : 'b-warn'}">${s.from === 'company' ? (s.required ? '🔒 Company, required' : 'Company default') : s.ok ? (s.official ? 'Official' : 'Trust check') : s.blocked ? '⛔ Blocked' : 'Invalid'}</span><span class="badge b-mute">${esc(s.kind)}</span></div><code>${esc(s.ok ? s.slug : s.line)}</code><div class="why">${esc(s.why || '')}</div></div>`).join('');
     const kits = (k) => (r[k] || []).map((x) => `<span class="kit">${esc(x)}<button data-act="kitdel" data-k="${k}" data-v="${esc(x)}" aria-label="Remove ${esc(x)}">✕</button></span>`).join('') || '<span class="empty">none</span>';
-    return `<h2>Sessions</h2>
+    return `<h2>Team</h2>
     ${intro('👥', `Your AI team. Each ${term('session', 'session')} has one job, things it must never do, and its own ${term('plugin', 'plugins and skills')}. Pick one on the left to see or change it, or add your own (for example a "Data Engineer").`,
       `You can paste GitHub links to tools you like for a session under ${term('source', 'Preferred sources')}. They're tried first when the session is set up.`)}
     <div class="split"><div class="panel rolelist" role="listbox" aria-label="Sessions">${Object.values(S.flow.roles).map((x) => `<button class="r" role="option" aria-selected="${x.id === roleSel}" data-act="role" data-id="${esc(x.id)}"><span class="dot" style="--rc:var(--${grp(x.id)})"></span>${esc(x.name)}<span class="cls">${esc(x.class || '')}</span></button>`).join('')}
@@ -399,10 +708,15 @@ function companyEditor() {
   <div class="panel kits">${C.defaults.blocked_sources.map((b) => `<span class="kit">⛔ ${esc(b)}<button data-act="blockdel" data-v="${esc(b)}" aria-label="Unblock ${esc(b)}">✕</button></span>`).join('')}<input type="text" id="block-repo" placeholder="owner/repo" style="width:160px"><button class="btn small" data-act="blockadd">+ Block</button></div>`;
 }
 
+VIEWS.team = VIEWS.sessions;
+VIEWS.status = () => VIEWS.check() + '<div style="height:26px"></div>' + VIEWS.board();
+VIEWS.rules = () => VIEWS.gates() + '<div style="height:26px"></div>' + VIEWS.presets();
 // ---------------- render ----------------
-const TABS = [['flow', 'Flow'], ['sessions', 'Sessions'], ['gates', 'Gates & words'], ['check', 'Check'], ['board', 'Board'], ['presets', 'Presets'], ['company', 'Company']];
+const TABS = [['flow', 'Flow'], ['team', 'Team'], ['status', 'Status'], ['rules', 'Rules'], ['company', 'Company']];
+const TAB_ALIAS = { sessions: 'team', gates: 'rules', presets: 'rules', check: 'status', board: 'status' };
 function render() {
   const a = document.activeElement, aid = a && a.id, sel = a && 'selectionStart' in a ? [a.selectionStart, a.selectionEnd] : null;
+  const focNode = a && a.dataset && a.dataset.node !== undefined ? a.dataset.node : null; // canvas steps have no id
   const errors = S.findings.filter((f) => f.level === 'error').length, warns = S.findings.filter((f) => f.level === 'warning').length;
   $('#title').textContent = isCompany() ? 'Company defaults editor' : 'Flow editor';
   $('#proj').textContent = `${String(S.root).split(/[\\/]/).filter(Boolean).pop()} · ${isCompany() ? 'company.json' : '.bootstrap/flow.json'}${dirty ? ' · unsaved changes' : ''}`;
@@ -413,8 +727,14 @@ function render() {
   b.textContent = errors ? `${errors} error${errors > 1 ? 's' : ''}${warns ? ` · ${warns} warning${warns > 1 ? 's' : ''}` : ''}` : warns ? `${warns} warning${warns > 1 ? 's' : ''}` : 'Flow OK';
   $('#saveBtn').disabled = !!errors || !dirty;
   $('#saveBtn').title = errors ? 'Fix the errors on the Check tab first' : dirty ? '' : 'No changes';
-  $('#nav').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-act="tab" data-id="${k}" aria-selected="${k === tab}">${n}${k === 'check' && (errors + warns) ? ` <span>${errors + warns}</span>` : ''}${k === 'flow' ? ` <span>${S.flow.lanes.length}</span>` : ''}${k === 'sessions' ? ` <span>${Object.keys(S.flow.roles).length}</span>` : ''}</button>`).join('');
-  $('#main').innerHTML = VIEWS[tab]() + `<footer>${isCompany() ? 'Saving writes company.json in the company folder. Commit and push it; projects take it with "Check for updates".' : 'Saving writes <code>.bootstrap/flow.json</code> (enforced by the guard and the pre-push hook once committed) and <code>docs/flow.md</code> (a readable copy with diagrams).'}</footer>`;
+  $('#nav').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-act="tab" data-id="${k}" aria-selected="${k === tab}">${n}${k === 'status' && (errors + warns) ? ` <span class="badge ${errors ? 'b-bad' : 'b-warn'}">${errors + warns}</span>` : ''}</button>`).join('');
+  $('#undoBtn').disabled = !hist.length; $('#redoBtn').disabled = !fut.length;
+  const keepScroll = tab === 'flow' && $('#wrap') ? [$('#wrap').scrollLeft, lane] : null; // edits re-render; don't jump back to the start
+  $('#main').className = tab === 'flow' ? 'flowmain' : '';
+  $('#main').innerHTML = VIEWS[tab]() + (tab === 'flow' ? '' : `<footer>${isCompany() ? 'Saving writes company.json in the company folder. Commit and push it; projects take it with "Check for updates".' : 'Saving writes <code>.bootstrap/flow.json</code> (enforced by the guard and the pre-push hook once committed) and <code>docs/flow.md</code> (a readable copy with diagrams).'}</footer>`);
+  // Synchronous on purpose: reading sizes forces layout, and animation frames don't run in background tabs.
+  if (tab === 'flow') { if (autoFit) fitZoom(); applyZoom(); if (keepScroll && keepScroll[1] === lane && $('#wrap')) $('#wrap').scrollLeft = keepScroll[0]; }
+  if (focNode !== null) { const el = document.querySelector(`[data-node="${focNode}"]`); if (el) el.focus(); }
   if (aid) { const el = document.getElementById(aid); if (el) { el.focus(); if (sel && 'setSelectionRange' in el) try { el.setSelectionRange(sel[0], sel[1]); } catch {} } }
 }
 
@@ -427,21 +747,27 @@ document.addEventListener('click', async (e) => {
   if (act === 'help') { return openHelp(); }
   if (act === 'hidewelcome') { welcomeHidden = true; try { localStorage.setItem('flow-welcome-hidden', '1'); } catch { /* fine */ } return render(); }
   if (act === 'condword') { const c = S.flow.conditions[+t.dataset.i], lay = L(); lay.conditions ||= []; let x = lay.conditions.find((y) => y.id === c.id); if (!x) { x = JSON.parse(JSON.stringify(c)); lay.conditions.push(x); } if (t.checked) x.require_word = 'approve'; else x.require_word = ''; return changed(true); }
-  if (act === 'tab') { tab = t.dataset.id; stageSel = null; return render(); }
-  if (act === 'lane') { lane = t.dataset.id; stageSel = null; return render(); }
-  if (act === 'stage') { stageSel = stageSel === +t.dataset.i ? null : +t.dataset.i; return render(); }
+  if (act === 'tab') { tab = t.dataset.id; stageSel = null; simState = null; return render(); }
+  if (act === 'lane') { lane = t.dataset.id; stageSel = null; simState = null; autoFit = true; return render(); }
+  if (act === 'plus') return edit((x) => { const st = newStage('stage', 'qa'); insertCol(x, +t.dataset.c, st); stageSel = x.stages.indexOf(st); }, 'Step inserted. Pick who does it on the right.');
+  if (act === 'zin') { autoFit = false; zoom = Math.min(1.4, +(zoom + 0.1).toFixed(2)); return applyZoom(); }
+  if (act === 'zout') { autoFit = false; zoom = Math.max(0.5, +(zoom - 0.1).toFixed(2)); return applyZoom(); }
+  if (act === 'zfit') { autoFit = true; fitZoom(); return applyZoom(); }
+  if (act === 'simrun') return runSim();
+  if (act === 'desel') { stageSel = null; return render(); }
+  if (act === 'aprm') return edit((x) => { x.dev_signoffs = (x.dev_signoffs || []).filter((r) => r !== t.dataset.r); });
+  if (act === 'side') return edit((x) => { x.stages[stageSel].with_previous = t.checked; });
   if (act === 'role') { roleSel = t.dataset.id; return render(); }
-  if (act === 'goto') { const [tb, id] = t.dataset.where.split(':'); tab = tb; if (tb === 'flow' && id) lane = id; if (tb === 'sessions' && id) roleSel = id; return render(); }
-  if (act === 'mv') { const x = laneEdit(lane), i = stageSel, j = i + +t.dataset.d; if (j >= 0 && j < x.stages.length) { [x.stages[i], x.stages[j]] = [x.stages[j], x.stages[i]]; stageSel = j; changed(true); } return; }
-  if (act === 'delstage') { laneEdit(lane).stages.splice(stageSel, 1); stageSel = null; return changed(true); }
-  if (act === 'addstage') { const x = laneEdit(lane); x.stages.push({ kind: 'stage', role: 'builder', title: 'New stage', produces: '' }); stageSel = x.stages.length - 1; return changed(true); }
+  if (act === 'goto') { const [tb, id] = t.dataset.where.split(':'); tab = TAB_ALIAS[tb] || tb; if (tab === 'flow' && id) lane = id; if (tab === 'team' && id) roleSel = id; return render(); }
+  if (act === 'mv') return edit((x) => { const cols = colsOf(x), c = colsOf(x).findIndex((col) => col.some((e) => e.i === stageSel)), g = +t.dataset.d > 0 ? c + 2 : c - 1; if (g < 0 || g > cols.length) return; const st = x.stages[stageSel]; moveToCol(x, stageSel, g); stageSel = x.stages.indexOf(st); });
+  if (act === 'delstage') return edit((x) => { removeAt(x, stageSel); stageSel = null; }, 'Step removed. Undo with Ctrl+Z.');
   if (act === 'addlane') {
     let n = 1; while (S.flow.lanes.some((x) => x.id === `lane-${n}`)) n++;
     const lay = L(); lay.lanes ||= [];
     lay.lanes.push({ id: `lane-${n}`, name: `New lane ${n}`, when: '', stages: [{ kind: 'stage', role: 'builder', title: 'Build', produces: 'Own branch' }, { kind: 'gate', gate: 'dev', title: 'Push to dev' }, { kind: 'word', word: 'release', title: '"release <scope>"' }, { kind: 'gate', gate: 'live', title: 'Push live' }], dev_signoffs: ['tech-lead', 'chief-of-staff'], live_word: 'release', live_exempt_signoffs: false });
-    lane = `lane-${n}`; stageSel = null; return changed(true);
+    snapshot(); lane = `lane-${n}`; stageSel = null; autoFit = true; return changed(true);
   }
-  if (act === 'dellane') { if (!confirm(`Remove the lane "${l.name}"? Pieces that name it fall back to Normal.`)) return; const lay = L(); lay.lanes = (lay.lanes || []).filter((x) => x.id !== lane); lay.lanes.push({ id: lane, removed: true }); lane = null; return changed(true); }
+  if (act === 'dellane') { if (!confirm(`Remove the lane "${l.name}"? Pieces that name it fall back to Normal.`)) return; snapshot(); const lay = L(); lay.lanes = (lay.lanes || []).filter((x) => x.id !== lane); lay.lanes.push({ id: lane, removed: true }); lane = null; return changed(true); }
   if (act === 'gate') { const x = laneEdit(t.dataset.l), r = t.dataset.r; x.dev_signoffs ||= []; x.dev_signoffs = x.dev_signoffs.includes(r) && t.type === 'checkbox' && !t.checked ? x.dev_signoffs.filter((y) => y !== r) : [...new Set([...x.dev_signoffs, r])]; return changed(true); }
   if (act === 'relay') { const lay = L(); lay.words ||= {}; lay.words[t.dataset.w] = { ...(lay.words[t.dataset.w] || {}), relay: t.checked }; return changed(true); }
   if (act === 'addcond') { const lay = L(); lay.conditions ||= []; let n = 1; while (S.flow.conditions.some((c) => c.id === `cond-${n}`)) n++; lay.conditions.push({ id: `cond-${n}`, label: 'New condition', globs: ['path/**'], require: ['tech-lead'] }); return changed(true); }
@@ -467,14 +793,16 @@ document.addEventListener('click', async (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target, act = t.dataset && t.dataset.act; if (!act) return;
-  if (act === 'st') { const s = laneEdit(lane).stages[stageSel]; s[t.dataset.k] = t.value; if (t.dataset.k === 'kind') { if (t.value === 'stage') s.role ||= 'builder'; if (t.value === 'word') s.word ||= 'release'; if (t.value === 'gate') s.gate ||= 'dev'; } return changed(true); }
-  if (act === 'ln') { laneEdit(lane)[t.dataset.k] = t.value; return changed(true); }
+  if (act === 'st') return edit((x) => { const st = x.stages[stageSel]; st[t.dataset.k] = t.value; if (t.dataset.k === 'word') st.title = { approve: "Owner's approval", go: "Owner's \"go\"", release: '"release <scope>"', apply: '"apply"' }[t.value] || st.title; });
+  if (act === 'ln') return edit((x) => { x[t.dataset.k] = t.value; });
+  if (act === 'apadd' && t.value) return edit((x) => { x.dev_signoffs = [...new Set([...(x.dev_signoffs || []), t.value])]; }, `${rname(t.value)} must now approve at this checkpoint.`);
   if (act === 'rf') { roleEdit(roleSel)[t.dataset.k] = t.value; return changed(true); }
   if (act === 'cond') { const c = S.flow.conditions[+t.dataset.i], lay = L(); lay.conditions ||= []; let x = lay.conditions.find((y) => y.id === c.id); if (!x) { x = JSON.parse(JSON.stringify(c)); lay.conditions.push(x); } x[t.dataset.k] = t.dataset.k === 'globs' ? t.value.split(',').map((s) => s.trim()).filter(Boolean) : t.dataset.k === 'require' ? [t.value] : t.value; return changed(true); }
   if (act === 'ext') { if (t.value.trim()) S.project.extends = t.value.trim(); else delete S.project.extends; return changed(true); }
   if (act === 'cname') { S.company.name = t.value; return changed(true); }
   if (act === 'cpreset') { S.company.defaults.preset = t.value; return changed(true); }
 });
+document.addEventListener('change', (e) => { const k = e.target.dataset && e.target.dataset.sim; if (k) simPick = e.target.checked ? [...new Set([...simPick, k])] : simPick.filter((x) => x !== k); });
 document.addEventListener('input', (e) => {
   if (e.target.dataset && e.target.dataset.act === 'src') { roleEdit(roleSel).sources = e.target.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean); changed(); }
 });
@@ -483,6 +811,12 @@ $('#saveBtn').addEventListener('click', async () => {
   catch (e) { toast(`Not saved: ${e.message}`); if (e.data && e.data.findings) { S.findings = e.data.findings; tab = 'check'; render(); } }
 });
 $('#helpBtn').addEventListener('click', () => openHelp());
+$('#undoBtn').addEventListener('click', () => undo());
+$('#redoBtn').addEventListener('click', () => redo());
+$('#wizardBtn').addEventListener('click', () => { if (isCompany()) return toast('The wizard sets up a project flow; open the editor inside a project.'); openWizard(); });
+$('#wzNext').addEventListener('click', () => { wzAns[wz] = $('input[name=wz]:checked').value; if (++wz < WZ.length) return showWz(); finishWizard(); });
+$('#wzSkip').addEventListener('click', () => { $('#wizard').hidden = true; try { localStorage.setItem('flow-wizard-done', '1'); } catch { /* fine */ } });
+window.addEventListener('resize', () => { if (tab === 'flow') { if (autoFit) fitZoom(); applyZoom(); } });
 $('#drawerClose').addEventListener('click', () => { $('#drawer').hidden = true; $('#helpBtn').focus(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#drawer').hidden) { $('#drawer').hidden = true; $('#helpBtn').focus(); } });
 $('#themeBtn').addEventListener('click', () => { const r = document.documentElement; r.dataset.theme = (r.dataset.theme === 'dark' || (!r.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches)) ? 'light' : 'dark'; });
@@ -491,10 +825,13 @@ window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault()
 function fromHash() {
   const [t, id] = decodeURIComponent(location.hash.slice(1)).split('/');
   if (t === 'help') return openHelp(id);
-  if (TABS.some(([k]) => k === t)) { tab = t; if (t === 'sessions' && id) roleSel = id; if (t === 'flow' && id) lane = id; }
+  const k = TAB_ALIAS[t] || t;
+  if (t === 'wizard') { tab = 'flow'; return setTimeout(openWizard, 0); }
+  if (t === 'simulate') { tab = 'flow'; simPick = (id || '').split(',').filter(Boolean); return setTimeout(runSim, 0); } // e.g. #simulate/sensitive,screens
+  if (TABS.some(([x]) => x === k)) { tab = k; if (k === 'team' && id) roleSel = id; if (k === 'flow' && id) lane = id; }
 }
 window.addEventListener('hashchange', () => { fromHash(); if (S) render(); });
-api('/api/state').then((st) => { S = st; if (S.mode === 'company') { S.company ||= { version: 1, name: 'Company' }; } fromHash(); render(); }).catch((e) => { $('#main').innerHTML = `<div class="panel"><b>Could not load:</b> ${esc(e.message)}. Open the exact link printed by <code>bootstrap flow</code>.</div>`; });
+api('/api/state').then((st) => { S = st; if (S.mode === 'company') { S.company ||= { version: 1, name: 'Company' }; } fromHash(); render(); if (wizardNeeded() && location.hash !== '#nowizard') openWizard(); }).catch((e) => { $('#main').innerHTML = `<div class="panel"><b>Could not load:</b> ${esc(e.message)}. Open the exact link printed by <code>bootstrap flow</code>.</div>`; });
 </script>
 </body>
 </html>

@@ -209,6 +209,40 @@ export function wordRecordProblems(rec, word, flow) {
   return p;
 }
 
+// ---------- side-by-side steps ----------
+// A stage with `with_previous: true` runs side by side with the stage before it (one column on the canvas).
+// Only session stages can be grouped; gates and words always stand alone. Enforcement is unaffected:
+// only gates and the owner's words are checked.
+export function columns(lane) {
+  const cols = [];
+  (lane.stages || []).forEach((s, i) => {
+    const prev = cols[cols.length - 1];
+    if (s.with_previous && s.kind === 'stage' && prev && prev[prev.length - 1].s.kind === 'stage') prev.push({ s, i });
+    else cols.push([{ s, i }]);
+  });
+  return cols;
+}
+
+// ---------- "Try a change": the same logic the push check uses ----------
+export function suggestLaneFor(flow, hitConds) {
+  const has = (l) => flow.lanes.some((x) => x.id === l);
+  if (hitConds.some((c) => ['sensitive', 'migrations'].includes(c.id)) && has('high')) return 'high';
+  if (!hitConds.some((c) => c.id === 'screens') && has('no-screen')) return 'no-screen';
+  return has('normal') ? 'normal' : flow.lanes[0].id;
+}
+
+// condIds: the conditions a pretend change touches; docsOnly: only docs change.
+export function simulate(flow, { condIds = [], docsOnly = false, laneId = null } = {}) {
+  if (docsOnly) return { docsOnly: true, lane: null, required: [], words: [], added: [], path: [] };
+  const hit = flow.conditions.filter((c) => condIds.includes(c.id));
+  const lane = laneId && flow.lanes.some((l) => l.id === laneId) ? laneId : suggestLaneFor(flow, hit);
+  const L = laneOf(flow, lane);
+  const base = L.live_exempt_signoffs ? [] : (L.dev_signoffs || []);
+  const added = L.live_exempt_signoffs ? [] : [...new Set(hit.flatMap((c) => c.require || []))].filter((r) => !base.includes(r));
+  const words = [...new Set([L.require_word, ...hit.map((c) => c.require_word), ...(L.stages || []).filter((s) => s.kind === 'word').map((s) => s.word), L.live_word].filter(Boolean))];
+  return { docsOnly: false, lane, required: [...base, ...added], added, words, path: (L.stages || []).map((_, i) => i) };
+}
+
 // ---------- checks shown in the editor and by `bootstrap flow check` ----------
 export function validate(layers, flow) {
   const out = [];
@@ -238,6 +272,7 @@ export function validate(layers, flow) {
     if (hasLive && !l.live_word) add('error', `Lane "${l.name}" reaches live without one of your words.`, 'Set the live word (release or apply).', `flow:${l.id}`);
     if (hasLive && !l.stages.some((s) => s.kind === 'word' && s.word === l.live_word)) add('warning', `Lane "${l.name}" has no "${l.live_word}" step drawn before Push live.`, 'Add the word step so sessions see where it is needed.', `flow:${l.id}`);
     for (const s of l.stages) if (s.kind === 'stage' && !flow.roles[s.role]) add('error', `Lane "${l.name}" has a stage owned by "${s.role}", which is not a session.`, 'Pick a session for it, or add that session.', `flow:${l.id}`);
+    if (l.stages.some((s) => s.with_previous && s.kind !== 'stage')) add('info', `Lane "${l.name}": only session steps can run side by side; a checkpoint or your word always stands alone.`, '', `flow:${l.id}`);
     if (!l.live_exempt_signoffs && hasDev) {
       if (!(l.dev_signoffs || []).length) add('error', `Lane "${l.name}" lets code reach dev with no sign-offs at all.`, 'Tick at least one reviewer in Gates.', `gates:${l.id}`);
       else if (!(l.dev_signoffs || []).some((r) => REVIEWERS.includes(r))) add('warning', `Lane "${l.name}" lets code reach dev without QA, Tech Lead or Security signing. Nobody reviews the code.`, 'Tick Tech Lead or QA for this lane in Gates.', `gates:${l.id}`);
@@ -267,11 +302,14 @@ export function renderMarkdown(flow) {
     `Preset: **${PRESETS[flow.preset] ? PRESETS[flow.preset].label : flow.preset}**${flow.company ? ` · inherits **${flow.company.name}** defaults${flow.company.sha ? ` @ \`${flow.company.sha}\`` : ''}` : ''}`, ''];
   for (const l of flow.lanes) {
     lines.push(`## ${l.name}`, '', `Used when: ${l.when || '—'}`, '', '```mermaid', 'flowchart LR');
-    l.stages.forEach((s, i) => {
-      const label = s.kind === 'stage' ? `${name(s.role)}: ${s.title}` : s.kind === 'gate' ? `${s.title}` : `Owner: ${s.title}`;
-      const shape = s.kind === 'gate' ? [`{{"`, `"}}`] : s.kind === 'word' ? [`(["`, `"])`] : [`["`, `"]`];
-      lines.push(`  s${i}${shape[0]}${label.replace(/"/g, "'")}${shape[1]}`);
-      if (i) lines.push(`  s${i - 1} --> s${i}`);
+    const cols = columns(l);
+    cols.forEach((col, c) => {
+      for (const { s, i } of col) {
+        const label = s.kind === 'stage' ? `${name(s.role)}: ${s.title}` : s.kind === 'gate' ? `${s.title}` : `Owner: ${s.title}`;
+        const shape = s.kind === 'gate' ? [`{{"`, `"}}`] : s.kind === 'word' ? [`(["`, `"])`] : [`["`, `"]`];
+        lines.push(`  s${i}${shape[0]}${label.replace(/"/g, "'")}${shape[1]}`);
+        if (c) for (const p of cols[c - 1]) lines.push(`  s${p.i} --> s${i}`); // side-by-side steps fan out and back in
+      }
     });
     lines.push('```', '');
     if (!l.live_exempt_signoffs) lines.push(`Dev gate sign-offs: ${(l.dev_signoffs || []).map(name).join(', ') || 'none'}`);

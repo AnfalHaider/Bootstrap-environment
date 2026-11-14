@@ -20,6 +20,7 @@
 //   bootstrap flow sources [role]                                each session's preferred sources (company + project)
 //   bootstrap company init <dir> [--name "Acme"]                 scaffold a company defaults folder (company.json)
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseFrontmatter } from './lib/fm.mjs';
@@ -113,6 +114,18 @@ function init(root, args) {
   console.log('\nNext: edit .bootstrap/policy.json destructive_commands with the answers to Phase 0H, then `bootstrap role <id>` in each worktree.');
 }
 
+// Plugins switched on for this folder before any local override: user settings (every project) then
+// the project's own settings, later layers winning. CLAUDE_CONFIG_DIR is honoured like Claude Code does.
+export function enabledPluginIds(root) {
+  const read = (f) => { try { return JSON.parse(readFileSync(f, 'utf8')).enabledPlugins || {}; } catch { return {}; } };
+  const home = process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
+  const on = new Set();
+  for (const f of [join(home, 'settings.json'), join(root, '.claude', 'settings.json')]) {
+    for (const [pid, v] of Object.entries(read(f))) { if (v) on.add(pid); else on.delete(pid); }
+  }
+  return [...on];
+}
+
 function role(root, id) {
   const brief = join(root, '.bootstrap', 'roles', `${id}.md`);
   if (!existsSync(brief)) { console.error(`no role brief ${brief}; run init first or pick one of: ${readdirSync(join(root, '.bootstrap', 'roles')).map((f) => f.replace(/\.md$/, '')).join(', ')}`); process.exit(1); }
@@ -126,9 +139,12 @@ function role(root, id) {
   backup(p);
   s.permissions ||= {};
   s.permissions.deny = [...new Set([...(s.permissions.deny || []), ...(data.deny || [])])];
-  const kit = Array.isArray(data.kit_plugins) ? data.kit_plugins : [];
-  const projectSettings = join(root, '.claude', 'settings.json');
-  const installed = existsSync(projectSettings) ? Object.keys(JSON.parse(readFileSync(projectSettings, 'utf8')).enabledPlugins || {}) : [];
+  // The kit comes from the merged flow (so editor changes count), falling back to the role file.
+  let kit = Array.isArray(data.kit_plugins) ? data.kit_plugins : [];
+  try { const fr = loadFlow(root).flow.roles[id]; if (fr && Array.isArray(fr.plugins) && fr.plugins.length) kit = fr.plugins; } catch { /* keep the role file's kit */ }
+  // Every plugin that would load in this folder: enabled for the user (all projects) or for this project.
+  // Both must be narrowed, or user-level plugins ride along in every permanent session.
+  const installed = enabledPluginIds(root);
   if (installed.length && kit.length) {
     s.enabledPlugins ||= {};
     // kit entries are plugin names, optionally with * wildcards ("*-lsp" = every language server).

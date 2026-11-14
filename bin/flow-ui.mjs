@@ -11,7 +11,7 @@ import { createServer as httpServer } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseFrontmatter } from './lib/fm.mjs';
-import { KIT, PRESETS, loadLayers, merge, parseExtends, renderMarkdown, requiredFor, validate } from './lib/flow.mjs';
+import { KIT, PRESETS, loadLayers, merge, parseExtends, renderMarkdown, requiredFor, simulate, validate } from './lib/flow.mjs';
 import { repoRoot } from './lib/policy.mjs';
 
 function board(root, flow) {
@@ -87,6 +87,11 @@ export function makeServer({ root = null, companyDir = null, token = randomBytes
       const body = await readBody(req);
 
       if (url.pathname === '/api/check') return send(res, 200, stateOf(layersFor(body.project, body.company)));
+      if (url.pathname === '/api/simulate') {
+        // "Try a change": the same lane/sign-off/word logic the pre-push check uses, on the flow being edited.
+        const flow = merge(layersFor(body.project, body.company));
+        return send(res, 200, simulate(flow, { condIds: Array.isArray(body.condIds) ? body.condIds : [], docsOnly: !!body.docsOnly, laneId: body.laneId || null }));
+      }
       if (url.pathname === '/api/save') {
         if (mode === 'company') {
           const st = stateOf(layersFor(null, body.company));

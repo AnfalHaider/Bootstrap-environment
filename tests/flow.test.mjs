@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
-import { loadLayers, merge, parseSource, requiredFor, validate } from '../bin/lib/flow.mjs';
+import { columns, loadLayers, merge, parseSource, renderMarkdown, requiredFor, simulate, validate } from '../bin/lib/flow.mjs';
 import { checkPush } from '../bin/prepush.mjs';
 import { loadPolicy } from '../bin/lib/policy.mjs';
 import { decide } from '../bin/guard.mjs';
@@ -190,6 +190,12 @@ describe('editor server', () => {
     });
     assert.equal(status, 403);
   });
+  test('/api/simulate answers with the same logic, for the flow being edited', async () => {
+    const r = await (await call('/api/simulate', { method: 'POST', body: { project: { version: 1 }, condIds: ['sensitive'] } })).json();
+    assert.equal(r.lane, 'high');
+    assert.ok(r.required.includes('security'));
+    assert.equal((await call('/api/simulate', { method: 'POST', tok: 'nope', body: {} })).status, 403);
+  });
   test('save refuses a flow with errors, accepts a valid one and writes flow.md', async () => {
     const bad = await call('/api/save', { method: 'POST', body: { project: { version: 1, lanes: [{ id: 'x', name: 'X', stages: [{ kind: 'gate', gate: 'live', title: 'l' }], dev_signoffs: [], live_word: '' }] } } });
     assert.equal(bad.status, 409);
@@ -197,6 +203,41 @@ describe('editor server', () => {
     assert.equal(good.status, 200);
     assert.match(readFileSync(join(repo, 'docs', 'flow.md'), 'utf8'), /```mermaid/);
     assert.match(readFileSync(join(repo, '.bootstrap', 'flow.json'), 'utf8'), /obra\/superpowers/);
+  });
+});
+
+describe('canvas: side-by-side steps and the simulator', () => {
+  test('with_previous groups session steps into one column; gates and words stay alone', () => {
+    const { flow } = flowWith({ version: 1 });
+    const l = JSON.parse(JSON.stringify(flow.lanes.find((x) => x.id === 'normal')));
+    const build = l.stages.findIndex((x) => x.title === 'Build');
+    l.stages[build].with_previous = true;
+    l.stages[build + 1].with_previous = true; // the checkpoint: must not join the group
+    const cols = columns(l).map((c) => c.map((e) => e.s.title));
+    assert.deepEqual(cols.find((c) => c.length > 1), ['Acceptance checks', 'Build']);
+    assert.ok(cols.some((c) => c.length === 1 && c[0] === 'Push to dev'));
+  });
+  test('docs/flow.md fans side-by-side steps out and back in', () => {
+    const { flow } = flowWith({ version: 1, lanes: [{ id: 'hotfix', stages: [
+      { kind: 'stage', role: 'hotfix', title: 'Fix' }, { kind: 'stage', role: 'qa', title: 'Check', with_previous: true },
+      { kind: 'word', word: 'apply', title: 'apply' }, { kind: 'gate', gate: 'live', title: 'Live' }] }] });
+    const md = renderMarkdown(flow);
+    assert.match(md, /s0 --> s2/); assert.match(md, /s1 --> s2/);
+  });
+  test('simulate: auth + screen → HIGH, Design added, words include go and approve; docs-only skips', () => {
+    const { flow } = flowWith({ version: 1 });
+    const r = simulate(flow, { condIds: ['sensitive', 'screens'] });
+    assert.equal(r.lane, 'high');
+    assert.deepEqual(r.added, ['design']);
+    assert.ok(r.required.includes('security') && r.required.includes('design'));
+    assert.ok(r.words.includes('go') && r.words.includes('approve') && r.words.includes('release'));
+    assert.equal(simulate(flow, { condIds: [] }).lane, 'no-screen');
+    assert.equal(simulate(flow, { docsOnly: true }).docsOnly, true);
+  });
+  test('simulate agrees with requiredFor (the push check) for the same lane and files', () => {
+    const { flow } = flowWith({ version: 1 });
+    const r = simulate(flow, { condIds: ['sensitive'], laneId: 'normal' });
+    assert.deepEqual([...r.required].sort(), requiredFor(flow, 'normal', ['src/auth/login.js']));
   });
 });
 
