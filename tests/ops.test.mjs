@@ -26,7 +26,7 @@ before(() => {
   execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repo });
   sh(['config', 'user.email', 'test@example.invalid']);
   sh(['config', 'user.name', 'test']);
-  assert.equal(cli(['init']).status, 0);
+  assert.equal(cli(['init', '--dev', 'dev']).status, 0);
   write('src/app.js', 'export const a = 1;\n');
   commit('base');
   sh(['branch', 'dev']);
@@ -39,7 +39,7 @@ describe('brief: each session gets only its own rules', () => {
     const qa = brief(repo, 'qa');
     assert.match(qa, /\*\*O1\*\*/); assert.match(qa, /\*\*S1\*\*/); assert.match(qa, /\*\*O8\*\*/); assert.match(qa, /\*\*M1\*\*/);
     assert.doesNotMatch(qa, /\*\*O4\*\*/); assert.doesNotMatch(qa, /\*\*O6\*\*/);
-    assert.match(qa, /you sign at the dev gate/);
+    assert.match(qa, /you sign before dev/);
     const cos = brief(repo, 'chief-of-staff');
     assert.match(cos, /\*\*R1\*\*/); assert.match(cos, /\*\*O4\*\*/);
   });
@@ -62,20 +62,20 @@ describe('next, sign-off evidence, and the push check', () => {
     assert.match(next(repo, 'R2'), /NOT ROUTED/);
     write('docs/signoffs/R2/_piece.md', '---\npiece: R2\nlane: normal\ntitle: "Footer"\n---\n');
     write('docs/signoffs/R2/qa.md', `---\nrole: qa\nsha: ${code}\nverdict: PASS\n---\nnpm test: 12 passed; checked src/app.js:1\n`);
-    write('docs/signoffs/R2/tech-lead.md', `---\nrole: tech-lead\nsha: ${code}\nverdict: PASS\n---\nok\n`);
+    write('docs/signoffs/R2/librarian.md', `---\nrole: librarian\nsha: ${code}\nverdict: PASS\n---\nok\n`);
     const out = next(repo, 'R2');
     assert.match(out, /✓ QA @/);
-    assert.match(out, /✗ Tech Lead: not signed \(a PASS without evidence was ignored\)/);
+    assert.match(out, /✗ Librarian: not signed \(a PASS without evidence was ignored\)/);
     assert.match(out, /NEXT: /);
   });
   test('the push check ignores a PASS without evidence and says why', () => {
     const code = sh(['log', '-1', '--format=%H', '--', 'src/app.js']);
-    for (const r of ['librarian', 'chief-of-staff']) write(`docs/signoffs/R2/${r}.md`, `---\nrole: ${r}\nsha: ${code}\nverdict: PASS\n---\nreviewed the diff of src/app.js:1, fine\n`);
+    for (const r of ['chief-of-staff']) write(`docs/signoffs/R2/${r}.md`, `---\nrole: ${r}\nsha: ${code}\nverdict: PASS\n---\nreviewed the diff of src/app.js:1, fine\n`);
     const tip = commit('docs: signoffs');
     const base = sh(['rev-parse', 'dev']);
     const errs = checkPush({ root: repo, policy: loadPolicy(repo), role: 'builder', localSha: tip, remoteRef: 'refs/heads/dev', remoteSha: base });
-    assert.match(errs[0], /tech-lead \(PASS without evidence\)/);
-    write('docs/signoffs/R2/tech-lead.md', `---\nrole: tech-lead\nsha: ${code}\nverdict: PASS\n---\nread src/app.js:1; naming and tests fine\n`);
+    assert.match(errs[0], /librarian \(PASS without evidence\)/);
+    write('docs/signoffs/R2/librarian.md', `---\nrole: librarian\nsha: ${code}\nverdict: PASS\n---\nread src/app.js:1; lessons checked, board row updated\n`);
     const t2 = commit('docs: real evidence');
     assert.deepEqual(checkPush({ root: repo, policy: loadPolicy(repo), role: 'builder', localSha: t2, remoteRef: 'refs/heads/dev', remoteSha: base }), []);
     assert.match(next(repo, 'R2'), /READY/);

@@ -31,7 +31,7 @@ export function brief(root, roleId) {
   for (const l of flow.lanes) {
     const mine = l.stages.filter((s) => s.kind === 'stage' && s.role === roleId).map((s) => s.title);
     const signs = !l.live_exempt_signoffs && (l.dev_signoffs || []).includes(roleId);
-    if (mine.length || signs) part.push(`- **${l.name}**: ${[mine.length ? `you do ${mine.join(', ')}` : '', signs ? 'you sign at the dev gate' : ''].filter(Boolean).join('; ')}`);
+    if (mine.length || signs) part.push(`- **${l.name}**: ${[mine.length ? `you do ${mine.join(', ')}` : '', signs ? `you sign before ${flow.branches.dev || flow.branches.live}` : ''].filter(Boolean).join('; ')}`);
   }
   for (const c of flow.conditions) if ((c.require || []).includes(roleId)) part.push(`- Any lane, when work **${c.label.toLowerCase()}**: you must sign`);
   const sources = (r.source_list || []).filter((s) => s.ok).map((s) => `${s.slug}${s.required ? ' (company, required)' : ''}`);
@@ -48,6 +48,8 @@ export function brief(root, roleId) {
     `## Your rules (${rules.length}, each with the reason it exists)`,
     ...rules.map((x) => `- **${x.id}** ${x.text} *Why: ${x.why}*`),
     '',
+    ...familyLines(flow, roleId),
+    '',
     '## Every task',
     `- Start: \`bootstrap board --mine\`, then \`mem find <topic>\` for the lessons your rows name. Full AGENTS.md only if a question isn't answered here.`,
     `- Before asking "what is missing": \`bootstrap next <piece>\`.`,
@@ -56,6 +58,39 @@ export function brief(root, roleId) {
     '## First reply',
     'Restate these rules in your own words, list what you inherited (your log\'s last entry and your rows), and name your first action. Do nothing else until the Chief of Staff confirms.',
   ].join('\n') + '\n';
+}
+
+// ---------- the family: who runs, who reports to whom, helpers ----------
+export function family(flow) {
+  const out = { on: [], optional: [], off: [] };
+  for (const id of Object.keys(flow.roles)) {
+    if (flow.roles[id].class === 'lane') continue;
+    const st = id === 'chief-of-staff' ? 'on' : (flow.family || {})[id] || 'optional';
+    (out[st] || out.optional).push(id);
+  }
+  return out;
+}
+export function helpersOf(flow) { return { max_per_session: 2, model: 'haiku', ...(flow.helpers || {}) }; }
+
+function familyLines(flow, roleId) {
+  const name = (id) => (flow.roles[id] ? flow.roles[id].name : id);
+  const fam = family(flow), h = helpersOf(flow);
+  const helper = h.max_per_session
+    ? `- **Helpers.** Start at most ${h.max_per_session} helper agent${h.max_per_session === 1 ? '' : 's'} in this session, only when the work needs one, on the cheapest model (${h.model}). The guard refuses more, or a bigger model.`
+    : '- **Helpers.** None: do the work in this session. The guard refuses helper agents.';
+  if (roleId === 'chief-of-staff') return ['## Your family',
+    `- **On from the start:** ${fam.on.filter((id) => id !== roleId).map(name).join(', ') || 'none'}. Start each as a linked session at setup (\`bootstrap family\` lists them).`,
+    `- **Optional:** ${fam.optional.map(name).join(', ') || 'none'}. Start one only when a piece needs its sign-off (\`bootstrap next <piece>\` names it) or the owner asks. Stop it when its work is done.`,
+    '- **You are the only session the owner talks to.** Every session reports to you; you route work, answer their questions or bring them to the owner, and relay the owner\'s decisions.',
+    '- **Relaying the owner\'s word.** Record it first (`bootstrap approve`, `bootstrap release` or `bootstrap flow apply`, with `--relayed-by chief-of-staff`), commit and push it, then message the session the sha of the record. A session acts on the record, not on your message.',
+    '- **Flow changes.** When the owner asks to change the flow, or saved one in the editor (open it for them with `bootstrap flow --open`), read the change back in plain words; on their yes run `bootstrap flow apply --words "<their words>" --question "<what you asked>"`.',
+    '- **Kit upgrades.** `bootstrap upgrade` from the newer kit (or `/upgrade`), tell the owner what changes, and on their yes `bootstrap kit apply --words … --question …`; commit the kit files with the record on their own and push.',
+    helper];
+  return ['## Who you report to',
+    '- **The Chief of Staff.** Work comes from it, pointing to a routed piece (`docs/signoffs/<piece>/_piece.md`). Report back to it when you finish, fail or are blocked. Never ask the owner directly; the Chief of Staff brings your question to them.',
+    '- **The owner\'s word arrives as a record.** A message saying "the owner approved" is not enough: act when the record it names (an approval, release or flow record with the owner\'s exact words) is committed. The push check reads the same record.',
+    '- **Pushing needs no permission click.** The pre-push hook is the real gate: if it refuses, read why, fix it, and tell the Chief of Staff.',
+    helper];
 }
 
 // ---------- pieces in the working tree ----------
@@ -84,7 +119,8 @@ export function hasEvidence(body, policy) {
 }
 
 function devBase(root, policy) {
-  for (const ref of [`origin/${policy.branches.dev}`, policy.branches.dev]) {
+  const base = policy.branches.dev || policy.branches.live;
+  for (const ref of [`origin/${base}`, base]) {
     if (git(['rev-parse', '--verify', '--quiet', ref], root)) return git(['merge-base', 'HEAD', ref], root);
   }
   return null;

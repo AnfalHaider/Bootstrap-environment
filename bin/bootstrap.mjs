@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // bootstrap — install the toolkit into a project and keep its records in the shape the checks read.
 //
-//   bootstrap init [--live main] [--dev dev] [--project-hooks]   scaffold, never overwrite
+//   bootstrap init [--live <b>] [--dev <b>|none] [--project-hooks]  scaffold, never overwrite (branches detected if not given)
 //   bootstrap role <role-id>                                     mark this worktree's session role + narrow its kit
 //   bootstrap signoff <piece> --verdict PASS|FAIL [--sha S] [--role R] [--note "..."]
 //   bootstrap require <piece> <role> [<role>...]                 set which roles must sign a piece
@@ -14,8 +14,12 @@
 //   bootstrap board --mine | board archive [--keep 10]           only your rows · move old DONE rows out
 //   bootstrap piece <piece> --suggest [--files a,b]              suggest a lane and extra checks from changed files
 //   bootstrap cost                                               start cost per session and what is growing
+//   bootstrap family                                             which sessions run from the start, which are optional; helpers
+//   bootstrap upgrade                                            refresh the kit's own files from this (newer) kit (Chief of Staff)
+//   bootstrap kit apply --words "..." --question "..."          record the owner's yes to the kit upgrade (Chief of Staff)
 //   bootstrap flow [--open] [--port N]                           visual flow editor for this project (local only)
 //   bootstrap flow --company <dir> [--open]                      edit a company defaults folder
+//   bootstrap flow apply --words "..." --question "..."         record the owner's yes to the current flow (Chief of Staff)
 //   bootstrap flow check                                         check the flow; exit 1 on errors (CI-friendly)
 //   bootstrap flow sources [role]                                each session's preferred sources (company + project)
 //   bootstrap company init <dir> [--name "Acme"]                 scaffold a company defaults folder (company.json)
@@ -24,10 +28,10 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseFrontmatter } from './lib/fm.mjs';
-import { DEFAULT_POLICY, currentRole, git, globToRegex, loadPolicy, repoRoot } from './lib/policy.mjs';
-import { loadFlow } from './lib/flow.mjs';
-import { boardArchive, boardMine, brief, cost, newestCode, next, suggest } from './lib/ops.mjs';
-import { completeSignoffs } from './prepush.mjs';
+import { DEFAULT_POLICY, currentRole, detectBranches, git, globToRegex, loadPolicy, repoRoot } from './lib/policy.mjs';
+import { loadFlow, renderMarkdown } from './lib/flow.mjs';
+import { boardArchive, boardMine, brief, cost, family, helpersOf, newestCode, next, suggest } from './lib/ops.mjs';
+import { FLOW_CHANGES_DIR, KIT_CHANGES_DIR, completeSignoffs, hashText } from './prepush.mjs';
 import { runFlowUi } from './flow-ui.mjs';
 
 const KIT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -67,11 +71,17 @@ function backup(path) {
   return b;
 }
 
-function init(root, args) {
-  const live = arg(args, 'live', DEFAULT_POLICY.branches.live);
-  const dev = arg(args, 'dev', DEFAULT_POLICY.branches.dev);
+function init(root, args, { upgrading = false } = {}) {
+  const found = detectBranches(root);
+  const live = arg(args, 'live', found.live);
+  const devArg = arg(args, 'dev', found.dev);
+  const dev = !devArg || devArg === 'none' ? null : devArg;
+  const kept = loadPolicy(root);
+  if (kept) log('BRANCH', `live: ${kept.branches.live} · dev: ${kept.branches.dev || 'none'} (kept from .bootstrap/policy.json)`);
+  else log('BRANCH', `live: ${live}${arg(args, 'live') ? '' : ' (detected)'} · dev: ${dev || 'none: pieces go to live through a release'}${arg(args, 'dev') ? '' : ' (detected)'}`);
   // Toolkit code is refreshed on every init (it is ours); everything else is written once.
   copyTree(join(KIT, 'bin'), join(root, '.bootstrap', 'bin'), { overwrite: true });
+  writeFileSync(join(root, '.bootstrap', 'kit.json'), JSON.stringify({ version: kitVersion() }, null, 2) + '\n');
   copyTree(join(KIT, 'flow'), join(root, '.bootstrap', 'flow'), { overwrite: true });
   copyTree(join(KIT, 'ui'), join(root, '.bootstrap', 'ui'), { overwrite: true });
   copyTree(join(KIT, 'roles'), join(root, '.bootstrap', 'roles'));
@@ -83,6 +93,8 @@ function init(root, args) {
   writeOnce(join(root, '.bootstrap', 'policy.json'),
     JSON.stringify({ version: 1, branches: { live, dev }, destructive_commands: [], deny_all: DEFAULT_POLICY.deny_all }, null, 2) + '\n');
   copyTree(join(KIT, 'templates', 'project'), root);
+  const agents = join(root, 'AGENTS.md');
+  if (existsSync(agents)) writeFileSync(agents, readFileSync(agents, 'utf8').replace('`<main>` / `<dev>`', `\`${live}\` / ${dev ? `\`${dev}\`` : 'none (pieces go to live through a release)'}`));
   for (const d of ['docs/memory/lessons', 'docs/memory/logs', 'docs/signoffs', 'docs/releases', 'docs/research', 'docs/adr', 'docs/security']) {
     writeOnce(join(root, d, '.gitkeep'), '');
   }
@@ -94,8 +106,24 @@ function init(root, args) {
 
   const gi = join(root, '.gitignore');
   const have = existsSync(gi) ? readFileSync(gi, 'utf8') : '';
-  const add = ['.bootstrap/session.json', '.claude/settings.local.json', '*.bak-*'].filter((l) => !have.split(/\r?\n/).includes(l));
+  const add = ['.bootstrap/session.json', '.bootstrap/helpers/', '.claude/settings.local.json', '*.bak-*'].filter((l) => !have.split(/\r?\n/).includes(l));
   if (add.length) { writeFileSync(gi, have + (have && !have.endsWith('\n') ? '\n' : '') + add.join('\n') + '\n'); log('APPEND', `.gitignore: ${add.join(', ')}`); }
+
+  // Sessions push and run the kit without a permission click: the pre-push hook and the guard are the real gates.
+  {
+    const p = join(root, '.claude', 'settings.json');
+    const s = existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : {};
+    const want = ['Bash(git push:*)', 'Bash(node .bootstrap/bin/bootstrap.mjs:*)', 'Bash(node .bootstrap/bin/mem.mjs:*)'];
+    s.permissions ||= {}; s.permissions.allow ||= [];
+    const missing = want.filter((w) => !s.permissions.allow.includes(w));
+    if (missing.length) {
+      backup(p);
+      s.permissions.allow.push(...missing);
+      mkdirSync(dirname(p), { recursive: true });
+      writeFileSync(p, JSON.stringify(s, null, 2) + '\n');
+      log('UPDATE', `${p}: allow ${missing.join(', ')} (the pre-push hook still checks every push)`);
+    }
+  }
 
   if (args.includes('--project-hooks')) {
     const p = join(root, '.claude', 'settings.json');
@@ -105,13 +133,13 @@ function init(root, args) {
     s.hooks.PreToolUse ||= [];
     if (!JSON.stringify(s.hooks.PreToolUse).includes('guard.mjs')) {
       backup(p);
-      s.hooks.PreToolUse.push({ matcher: 'Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit', hooks: [{ type: 'command', command: cmd, timeout: 10 }] });
+      s.hooks.PreToolUse.push({ matcher: 'Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|Agent|Task', hooks: [{ type: 'command', command: cmd, timeout: 10 }] });
       mkdirSync(dirname(p), { recursive: true });
       writeFileSync(p, JSON.stringify(s, null, 2) + '\n');
       log('UPDATE', `${p}: PreToolUse guard (works without the plugin, e.g. cloud sessions)`);
     } else log('SKIP', `${p} already has the guard`);
   }
-  console.log('\nNext: edit .bootstrap/policy.json destructive_commands with the answers to Phase 0H, then `bootstrap role <id>` in each worktree.');
+  if (!upgrading) console.log('\nNext: edit .bootstrap/policy.json destructive_commands with the answers to Phase 0H, then `bootstrap role <id>` in each worktree.');
 }
 
 // Plugins switched on for this folder before any local override: user settings (every project) then
@@ -161,6 +189,48 @@ function role(root, id) {
 
 // A session acts only as its own role. Outside a session (no .bootstrap/session.json) it is the owner at
 // a terminal, who may record anything. Inside one, record commands are limited the same way the guard is.
+function kitVersion() {
+  try { return JSON.parse(readFileSync(join(KIT, 'package.json'), 'utf8')).version; } catch { return 'unknown'; }
+}
+function installedVersion(root) {
+  try { return JSON.parse(readFileSync(join(root, '.bootstrap', 'kit.json'), 'utf8')).version; } catch { return 'before 0.6.0'; }
+}
+
+// Run from the NEWER kit (the plugin) inside the project: refresh the kit's own files, keep everything the
+// project owns (policy, flow, roles it edited, records). The push needs the owner's yes: `bootstrap kit apply`.
+function upgrade(root, args) {
+  mustBe(root, ['chief-of-staff'], '`bootstrap upgrade`');
+  if (!loadPolicy(root)) { console.error('This project is not bootstrapped yet: run `bootstrap init` instead.'); process.exit(1); }
+  const from = installedVersion(root), to = kitVersion();
+  init(root, args.filter((a) => a !== "--project-hooks"), { upgrading: true });
+  const changed = (git(['status', '--porcelain', '--', ...KIT_UPGRADE_DIRS], root) || '').split('\n').filter(Boolean);
+  console.log(`\nKit ${from} → ${to}: ${changed.length} kit file(s) changed.`);
+  console.log(changed.length
+    ? 'Next (Chief of Staff): tell the owner what this upgrade changes (CHANGELOG.md of the kit), ask "Apply the kit upgrade?", and on their yes run\n  bootstrap kit apply --words "<their words>" --question "<what you asked>"\nthen commit the kit files with the record and push.'
+    : 'Nothing to apply: the project already has this kit.');
+}
+
+const KIT_UPGRADE_DIRS = ['.bootstrap/bin', '.bootstrap/flow', '.bootstrap/ui', '.bootstrap/roles', '.bootstrap/kit.json', '.githooks', '.claude/settings.json', '.gitignore'];
+
+// The owner said yes to a kit upgrade: record every kit file's sha256 (and files the upgrade removed).
+function kitApply(root, args) {
+  mustBe(root, ['chief-of-staff'], '`bootstrap kit apply`');
+  const missing = ['words', 'question'].filter((n) => !arg(args, n));
+  if (missing.length) { console.error(`missing --${missing.join(', --')}: the owner's exact words and the question you asked`); process.exit(1); }
+  const listed = (git(['ls-files', '--cached', '--others', '--exclude-standard', '--', ...KIT_UPGRADE_DIRS], root) || '').split('\n').filter(Boolean);
+  const files = [...new Set(listed)].sort().map((f) => {
+    const p = join(root, f);
+    return `${f}@${existsSync(p) ? hashText(readFileSync(p, 'utf8')) : 'deleted'}`;
+  });
+  const q = (s) => `"${String(s).replace(/"/g, "'")}"`;
+  const ver = installedVersion(root);
+  const p = join(root, KIT_CHANGES_DIR, `${today()}-kit-${String(ver).replace(/[^\w.-]/g, '_')}.md`);
+  mkdirSync(dirname(p), { recursive: true });
+  writeFileSync(p, `---\nkit_version: ${ver}\nowner_words: ${q(arg(args, 'words'))}\nquestion: ${q(arg(args, 'question'))}\nsaid_at: ${arg(args, 'said-at', new Date().toISOString())}\nrelayed_by: ${arg(args, 'relayed-by', 'chief-of-staff')}\nfiles:\n${files.map((f) => `  - ${f}`).join('\n')}\n---\n`);
+  log('CREATE', p);
+  console.log(`Recorded the owner's yes for ${files.length} kit file(s). Commit them with ${p.slice(root.length + 1).replace(/\\/g, '/')} and push; the push check accepts a kit-only change with this record.`);
+}
+
 function mustBe(root, allowed, what) {
   const me = currentRole(root);
   if (me !== 'unassigned' && !allowed.includes(me)) { console.error(`${what} is for ${allowed.join(' / ')} only; this session is "${me}".`); process.exit(1); }
@@ -226,7 +296,7 @@ function release(root, scope, args) {
 function status(root) {
   const policy = loadPolicy(root);
   console.log(`role:        ${currentRole(root)}`);
-  console.log(`policy:      ${policy ? `live=${policy.branches.live} dev=${policy.branches.dev}` : 'NOT BOOTSTRAPPED'}`);
+  console.log(`policy:      ${policy ? `live=${policy.branches.live} dev=${policy.branches.dev || 'none'}` : 'NOT BOOTSTRAPPED'}`);
   console.log(`hooksPath:   ${git(['config', 'core.hooksPath'], root) || 'UNSET (pre-push checks will not run)'}`);
   if (policy) {
     const hasFlow = existsSync(join(root, '.bootstrap', 'flow.json'));
@@ -253,7 +323,30 @@ function piece(root, id, args) {
   log('WRITE', `${p}: lane ${laneId} — commit it as a docs-only commit`);
 }
 
+// The owner said yes to a flow change (in chat with the Chief of Staff, or saved in the editor and confirmed).
+function flowApply(root, args) {
+  mustBe(root, ['chief-of-staff'], '`bootstrap flow apply`');
+  const missing = ['words', 'question'].filter((n) => !arg(args, n));
+  if (missing.length) { console.error(`missing --${missing.join(', --')}: the owner's exact words and the question you asked`); process.exit(1); }
+  const fp = join(root, '.bootstrap', 'flow.json');
+  if (!existsSync(fp)) { console.error('no .bootstrap/flow.json to apply'); process.exit(1); }
+  const { flow, findings } = loadFlow(root);
+  const errs = findings.filter((f) => f.level === 'error');
+  if (errs.length) { console.error(`the flow has errors; fix them before asking the owner:\n  ${errs.map((f) => f.msg).join('\n  ')}`); process.exit(1); }
+  writeFileSync(join(root, 'docs', 'flow.md'), renderMarkdown(flow));
+  const flowHash = hashText(readFileSync(fp, 'utf8'));
+  const cp = join(root, '.bootstrap', 'company.json');
+  const q = (s) => `"${String(s).replace(/"/g, "'")}"`;
+  const p = join(root, FLOW_CHANGES_DIR, `${today()}-${flowHash.slice(0, 8)}.md`);
+  mkdirSync(dirname(p), { recursive: true });
+  writeFileSync(p, `---\nowner_words: ${q(arg(args, 'words'))}\nquestion: ${q(arg(args, 'question'))}\nsaid_at: ${arg(args, 'said-at', new Date().toISOString())}\nrelayed_by: ${arg(args, 'relayed-by', 'chief-of-staff')}\nflow_sha256: ${flowHash}\n${existsSync(cp) ? `company_sha256: ${hashText(readFileSync(cp, 'utf8'))}\n` : ''}---\n\n${arg(args, 'summary', '')}\n`);
+  log('CREATE', `${p}`);
+  log('UPDATE', 'docs/flow.md');
+  console.log(`Commit .bootstrap/flow.json, docs/flow.md and ${p.slice(root.length + 1).replace(/\\/g, '/')} together, then push. The push check accepts a flow-only change with this record.`);
+}
+
 function flowCmd(root, args) {
+  if (args[0] === 'apply') return flowApply(root, args.slice(1));
   if (args[0] === 'check') {
     const { findings } = loadFlow(root);
     for (const f of findings) console.log(`${f.level.toUpperCase().padEnd(7)} ${f.msg}${f.fix ? `\n        fix: ${f.fix}` : ''}`);
@@ -273,6 +366,17 @@ function flowCmd(root, args) {
     return;
   }
   return runFlowUi(args);
+}
+
+function familyCmd(root) {
+  const { flow } = loadFlow(root);
+  const f = family(flow), h = helpersOf(flow);
+  const name = (id) => `${flow.roles[id].name} (${id})`;
+  console.log(`On from the start: ${f.on.map(name).join(', ')}`);
+  console.log(`Optional (the Chief of Staff starts one when a piece needs it, or the owner asks): ${f.optional.map(name).join(', ') || 'none'}`);
+  if (f.off.length) console.log(`Off: ${f.off.map(name).join(', ')}`);
+  console.log(`Branches: live ${flow.branches.live} · dev ${flow.branches.dev || 'none (pieces go to live through a release)'}`);
+  console.log(`Helpers: at most ${h.max_per_session} per session, model ${h.model}`);
 }
 
 function companyInit(dir, args) {
@@ -307,7 +411,10 @@ function main() {
   else if (cmd === 'board' && args[0] === '--mine') console.log(boardMine(root));
   else if (cmd === 'board' && args[0] === 'archive') console.log(boardArchive(root, Number(arg(args, 'keep', 10))));
   else if (cmd === 'cost') console.log(cost(root));
-  else { console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 15).map((l) => l.replace(/^\/\/ ?/, '')).join('\n')); process.exit(cmd ? 1 : 0); }
+  else if (cmd === 'family') familyCmd(root);
+  else if (cmd === 'upgrade') upgrade(root, args);
+  else if (cmd === 'kit' && args[0] === 'apply') kitApply(root, args.slice(1));
+  else { console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1).filter((l, i, a) => a.slice(0, i + 1).every((x) => x.startsWith('//'))).map((l) => l.replace(/^\/\/ ?/, '')).join('\n')); process.exit(cmd ? 1 : 0); }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) main();

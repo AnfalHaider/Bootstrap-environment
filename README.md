@@ -3,13 +3,15 @@
 **Run a software project with a team of AI assistants, and stay in control.**
 
 You talk to one assistant, the **Chief of Staff**. It runs a small team of AI sessions, each with one job:
-Design, Builder, QA, Tech Lead, Security, Release Ops and more. Every change is checked by the right team
+Builder, QA, Design, Librarian and Researcher from the start, and Security, Tech Lead, Release Ops and others
+when a change needs them. Every session reports to the Chief of Staff, so you never jump between chats or
+click "allow" in each one. Every change is checked by the right team
 members, nothing visual or risky lands without **your approval**, and nothing goes live without **your word**.
 These rules are enforced by the tools, not left to the assistants' good behaviour.
 
-![The flow canvas: drag sessions onto the flow, link steps, and see who must approve at each checkpoint](docs/images/canvas.png)
+![The flow editor: you talk to the Chief of Staff, which routes work to the sessions that are on and starts optional ones when needed](docs/images/flow-overview.png)
 
-> **Status: 0.5.0, early.** 63 tests pass against real git repositories. Claude Code is fully supported;
+> **Status: 0.6.0, early.** 74 tests pass against real git repositories. Claude Code is fully supported;
 > adapters for 13 other AI tools follow their November 2026 docs and still need testing inside each tool
 > (see [TODO.md](TODO.md)).
 
@@ -54,8 +56,8 @@ someone is in charge. This plugin turns each known failure into a rule the tools
 
 **1. A solo founder with a live app.** You ask the Chief of Staff for "an invoice footer with our bank
 details". It routes the piece to the *Normal* lane. Research and Design prepare an artifact, and you approve it
-in one message. QA writes the checks, the Builder builds it, Tech Lead and QA sign off with evidence, and you
-type `release invoice-footer`. You never read code, but every step is on record.
+in one message. QA writes the checks, the Builder builds it, QA and the Librarian sign off with evidence, and you
+tell the Chief of Staff `release invoice-footer`. You never read code, but every step is on record.
 
 **2. A risky change.** "Rate-limit password resets" touches login code, so `bootstrap piece R15 --suggest`
 proposes the *HIGH* lane. Security must sign too, a threat note is written, and nothing is built until you
@@ -76,7 +78,8 @@ in turn, and the push checks still keep a minimum of discipline.
 - **Control without micromanaging.** You decide only what matters: approve designs, say "go" on risky work, release. Everything else runs on its own.
 - **Proof, not promises.** Every approval carries evidence and the exact commit it covers, so "done" means done.
 - **Enforced, not hoped for.** A git pre-push check that runs in every tool refuses work that skipped a step, and explains what's missing.
-- **Your process, your way.** A drag-and-drop canvas: drop sessions onto the flow, link steps, run steps side by side, drag reviewers onto a checkpoint. A three-question wizard picks a starting flow, and undo/redo makes it safe to try things.
+- **Your process, your way.** One page to switch sessions on or make them optional, say which files bring in Security or Design, pick who signs each kind of work, and set how many helper agents a session may use. Or just tell the Chief of Staff what to change.
+- **Fits your branches.** It finds your live branch (`main`, `master`, `trunk`…) and uses a dev branch only if you have one.
 - **See before you commit.** "Try a change" shows the path a change would take, who must approve it, and whether a push would get through. It uses the same logic as the real pre-push check.
 - **Same rules everywhere.** Company defaults with locked minimums, approved sources and blocked sources.
 - **Remembers.** Lessons, decisions and hand-overs live in the repository, not in a chat that disappears.
@@ -94,7 +97,7 @@ in turn, and the push checks still keep a minimum of discipline.
 flowchart LR
   OWNER(["👤 You (owner)"]) <-->|"asks, approvals,<br/>release word"| COS["Chief of Staff"]
   COS -->|"brief + task"| TEAM
-  subgraph TEAM["Your AI team (permanent sessions)"]
+  subgraph TEAM["Your AI team (sessions that report to the Chief of Staff)"]
     direction TB
     RES["Researcher"] --- DES["Design"] --- BLD["Builder"]
     QA["QA"] --- TL["Tech Lead"] --- SEC["Security"]
@@ -104,7 +107,7 @@ flowchart LR
   COS -->|"routes pieces,<br/>records your words"| REPO
   REPO --> CHECK{"Push check:<br/>everything signed?"}
   CHECK -->|"no: refused + reason"| TEAM
-  CHECK -->|"yes"| DEV["Dev branch"]
+  CHECK -->|"yes"| DEV["Dev branch<br/>(if the project has one)"]
   DEV -->|"your 'release'"| LIVE(["🌐 Live"])
 ```
 
@@ -172,7 +175,11 @@ flowchart TD
   CM -->|"no"| OK1["✅ accepted"]
   T -->|"dev or live"| DOCS{"Only docs<br/>changed?"}
   DOCS -->|"yes"| OK2["✅ accepted"]
-  DOCS -->|"no, code"| ROUTE{"Piece routed<br/>to a lane?"}
+  DOCS -->|"no"| FLOWQ{"Only the flow<br/>changed?"}
+  FLOWQ -->|"yes"| FREC{"Your yes recorded<br/>for this exact flow?"}
+  FREC -->|"no"| R6["❌ refused"]
+  FREC -->|"yes"| OK5["✅ accepted"]
+  FLOWQ -->|"no, code"| ROUTE{"Piece routed<br/>to a lane?"}
   ROUTE -->|"no"| R2["❌ refused:<br/>no lane set"]
   ROUTE -->|"yes"| SIGN{"Every required role<br/>signed this sha<br/>with evidence?"}
   SIGN -->|"no"| R3["❌ refused:<br/>missing sign-off from …"]
@@ -180,7 +187,7 @@ flowchart TD
   WORD -->|"missing"| R4["❌ refused:<br/>owner's word …"]
   WORD -->|"ok"| LIVE{"Pushing live?"}
   LIVE -->|"no"| OK3["✅ accepted to dev"]
-  LIVE -->|"yes"| REC{"Release Ops or Hotfix,<br/>with a release record<br/>(your words, shas, check)?"}
+  LIVE -->|"yes"| REC{"Release Ops, Hotfix or CoS,<br/>with a release record<br/>(your words, shas, check)?"}
   REC -->|"no"| R5["❌ refused"]
   REC -->|"yes"| OK4["✅ live"]
 ```
@@ -191,11 +198,11 @@ flowchart TD
 flowchart LR
   subgraph N["Normal"]
     direction LR
-    n1["Research"] --> n2["Design"] --> n3(["Your approve"]) --> n4["Tests first"] --> n5["Build"] --> n6{{"Dev gate:<br/>QA · Tech Lead ·<br/>Librarian · CoS"}} --> n7(["Your release"]) --> n8{{"Live"}}
+    n1["Research"] --> n2["Design"] --> n3(["Your approve"]) --> n4["Tests first"] --> n5["Build"] --> n6{{"Dev gate:<br/>QA · Librarian · CoS"}} --> n7(["Your release"]) --> n8{{"Live"}}
   end
   subgraph H["HIGH (schema, money, auth)"]
     direction LR
-    h1["Research"] --> h2["Threat note"] --> h3(["Your go"]) --> h4["Build"] --> h5["Independent review"] --> h6{{"Dev gate:<br/>+ Security"}} --> h7(["Your release"]) --> h8{{"Live"}}
+    h1["Research"] --> h2["Threat note"] --> h3(["Your go"]) --> h4["Build"] --> h5["Independent review"] --> h6{{"Dev gate:<br/>+ Security, Tech Lead"}} --> h7(["Your release"]) --> h8{{"Live"}}
   end
   subgraph F["Hotfix (live is broken)"]
     direction LR
@@ -203,7 +210,8 @@ flowchart LR
   end
 ```
 
-The *No screen* lane is Normal without the design steps. File conditions add checks in **every** lane:
+With no dev branch, the dev gate goes away and the same sign-offs are checked when the release reaches
+live. The *No screen* lane is Normal without the design steps. File conditions add checks in **every** lane:
 login, payment or upload files add **Security**; screen files add **Design** and **your approval**;
 migrations add **Tech Lead**.
 
@@ -226,42 +234,43 @@ flowchart TB
 
 ## Screenshots
 
-The visual editor (`bootstrap flow --open`) runs locally in your browser. Everything you can drag can also
-be done with buttons or the keyboard, and every term has a plain-language explanation one click away.
+Ask the Chief of Staff to "open the flow editor" (or type `/flow`). It opens on this computer only, in the
+app's browser pane or your browser. You change what you want and press **Save**; the Chief of Staff reads
+the change back to you in plain words and, on your yes, records it and pushes it. Nothing changes for the
+team until then. Everything here can also be said in chat instead.
 
-### The canvas: draw your flow by dragging
+### You talk to one session
 
-![Flow canvas](docs/images/canvas.png)
+![Overview: you, the Chief of Staff, and the family around it](docs/images/flow-overview.png)
 
-- **Drag a session** from the left onto a **line** to add a step there, or onto a **step** to run both **side by side** (shaded group).
-- **Drag a step's ● dot** onto another step to **link** them, so the second step comes right after the first.
-- **Checkpoints show faces.** Drag a session onto a checkpoint to require its sign-off; drag a face off to remove it. 🔒 faces are company minimums and refuse to move.
-- **Click a step** to edit it on the right. Drag it to the 🗑 to remove it. **Undo/Redo** with Ctrl+Z / Ctrl+Y. **Fit** zooms the whole lane into view.
-- **Keyboard:** Tab to a step, ← → to move it, Delete to remove it, Enter to edit it.
+Solid lines are sessions **on from the start**; dashed ones are **optional**, started by the Chief of Staff
+when a piece needs them or when you ask. Click one to jump to it. On the right, **Try a change** shows who
+signs and what you are asked for a pretend change, using the same code as the push check.
 
-### Try a change before it happens
+### Team
 
-![Try a change: the HIGH lane lit up, with Design added by the screen change](docs/images/simulate.png)
+![Team: On, Optional or Off for each session](docs/images/flow-team.png)
 
-Tick what a change touches, for example login files and a screen, and press **Show me**. The editor
-switches to the lane that change would take, lights up its path step by step, and adds the extra reviewers
-as dashed faces. It then lists every approval and every word of yours that's needed. If any is missing when
-a session pushes, the push is refused. The answer comes from the same code the pre-push check runs.
+One switch per session: **On**, **Optional** or **Off**. The Chief of Staff is always on. Each card can
+also list GitHub sources you prefer for that session's tools.
 
-### Start in three questions
+### Extra checks
 
-<p align="center"><img src="docs/images/wizard.png" width="640" alt="First-run wizard"></p>
+![Extra checks: files that bring in Security, Design or Tech Lead](docs/images/flow-checks.png)
 
-First time? Three plain questions (what you're building, whether risky work should wait for your "go",
-whether your company has shared rules) pick a starting flow. **Start over** reopens them at any time.
+When a piece touches certain files, more sessions must sign. This is how an optional session like
+Security joins automatically for login, payment, upload or secret files, so "optional" never means
+"forgotten". Edit the file patterns, who signs, and whether you must say a word like "approve" first.
 
-### The other tabs
+### Kinds of work
 
-| | |
-|---|---|
-| **Team:** each session's job, limits, tools, and the GitHub links you prefer for it. Every link is checked as you type (official, trust check, blocked, invalid). ![Team tab](docs/images/team.png) | **Rules:** the full grid of who approves in each lane, extra checks for sensitive files, which of your words may be relayed, and presets. ![Rules tab](docs/images/rules.png) |
-| **Status:** problems in the flow (*Must fix* items block saving) and every piece of work with the approvals still missing. ![Status tab](docs/images/status.png) | **Company:** rules inherited by every project, with locked minimums and blocked sources. ![Company tab](docs/images/company.png) |
-| **Help:** every underlined word opens a plain explanation. ![Help panel](docs/images/help.png) | <p align="center"><img src="docs/images/mobile.png" width="260" alt="The editor on a phone"><br><em>Works on a phone too: the palette becomes a strip, and the canvas scrolls on its own.</em></p> |
+![Kinds of work: steps, who signs, and your word to go live](docs/images/flow-work.png)
+
+Each lane's steps, named after your real branches, who signs before the shared branch, and which of your
+words takes it live. Below it, **Helpers** sets how many helper agents one session may start (2 by
+default) and which model they must use (the cheapest).
+
+<p align="center"><img src="docs/images/flow-mobile.png" width="260" alt="The editor on a phone"><br><em>Works on a phone too.</em></p>
 
 ### What a session sees in the terminal
 
@@ -307,7 +316,7 @@ git clone https://github.com/AnfalHaider/Bootstrap-environment ~/bootstrap-envir
 ```
 
 ```bash
-node ~/bootstrap-environment/bin/bootstrap.mjs init --size live --live main --dev dev
+node ~/bootstrap-environment/bin/bootstrap.mjs init --size live
 ```
 
 ```bash
@@ -318,23 +327,27 @@ node .bootstrap/bin/bootstrap.mjs flow --open
 node .bootstrap/bin/adapt.mjs cursor
 ```
 
-`--size` is `prototype`, `small` or `live`. Replace `cursor` with your tool; `adapt.mjs list` shows them all.
+`--size` is `prototype`, `small` or `live`. Branches are detected: the live branch is the remote's default (`main`, `master`, `trunk`…), and a dev branch is used only if one exists. Override with `--live <branch> --dev <branch>|none`. Replace `cursor` with your tool; `adapt.mjs list` shows them all.
 
 ## Who checks what
 
 | When… | Who must approve, on that exact version | Enforced by |
 |---|---|---|
-| Any code joins the dev branch | the lane's sessions (Normal: QA, Tech Lead, Librarian, Chief of Staff) | pre-push check |
+| Any code joins the dev branch (or live, when there is no dev branch) | the lane's sessions (Normal: QA, Librarian, Chief of Staff) | pre-push check |
 | The code touches login, payments, uploads or secrets | + Security | pre-push check |
+| The code adds a migration | + Tech Lead | pre-push check |
 | The code changes a screen | + Design, **and your recorded approval of the design** | pre-push check |
 | The work is HIGH risk (schema, money, permissions…) | + Security, **and your recorded "go"** | pre-push check |
 | Any sign-off | must carry **evidence**; a bare PASS is ignored | pre-push check |
 | Code isn't routed to a lane yet | refused: the Chief of Staff routes every piece | pre-push check |
-| Anything goes live | Release Ops or Hotfix, **your "release"/"apply"** with the question answered, shas and a pasted check | pre-push check |
+| Anything goes live | Release Ops, Hotfix or the Chief of Staff, **your "release"/"apply"** with the question answered, shas and a pasted check | pre-push check |
+| The flow itself changes | **your recorded yes** for that exact flow (`bootstrap flow apply`); a later edit needs a new yes | pre-push check |
+| The kit is upgraded | **your recorded yes** for those exact kit files (`bootstrap kit apply`), pushed on their own; kit files mixed with project code need the full flow | pre-push check |
+| A session starts a helper agent | at most 2 per session, on the cheapest model | guard |
 
 **Who may write each record:**
 - A session can sign **only as itself**.
-- Only the Chief of Staff can route a piece or record your approval or "go".
+- Only the Chief of Staff can route a piece or record your approval, "go" or yes to a flow change.
 - Only Release Ops, Hotfix or the Chief of Staff can write a release record.
 
 **Not checked by the tools:** conversations, plans and research (nothing is pushed), commands run outside git, and docs-only commits (deliberately free).
@@ -357,9 +370,16 @@ node .bootstrap/bin/adapt.mjs cursor
 | **Support** *(on demand)* | user reports to rows, release notes | promises users dates |
 | **Project lanes** | one area each (e.g. onboarding, billing) | another lane's files |
 
-Each session is permanent and nested under the Chief of Staff wherever the tool supports it. Its first
-message is its role file plus `bootstrap brief <role>`: only its own rules, in full with their reasons.
-Rename sessions, add your own, or fold roles together in the editor. On the canvas, drag a session onto the flow to give it a step, or onto a checkpoint to make it a reviewer.
+**On from the start:** Chief of Staff, Builder, QA, Design, Librarian, Researcher. **Optional:** Security,
+Tech Lead, Release Ops, Hotfix, Platform, Support. The Chief of Staff starts an optional session when a piece
+needs its sign-off (`bootstrap next` names it) or when you ask, and `bootstrap family` lists both groups.
+Change either list in the editor or by asking the Chief of Staff.
+
+Every session is a linked session of the Chief of Staff and reports to it. Your decisions reach a session
+as a **record**: the Chief of Staff writes your exact words and the question you answered, commits them,
+and points the session to the record. A message alone is never taken as your word. Sessions push without
+a permission click, because the pre-push check is the real gate. Each session's first message is its role
+file plus `bootstrap brief <role>`: only its own rules, in full with their reasons.
 
 ## Light on tokens
 
@@ -383,8 +403,11 @@ How it stays light:
 
 | Command | What it does | Who |
 |---|---|---|
-| `bootstrap init --size … --live … --dev …` | set up a project (never overwrites) | owner / Claude |
-| `bootstrap flow --open` | visual editor: drag-and-drop canvas, change simulator, team, rules, status, company | owner |
+| `bootstrap init --size …` | set up a project (never overwrites; branches detected) | owner / Claude |
+| `/flow` or `bootstrap flow --open` | the flow editor: team, extra checks, kinds of work, helpers, change simulator | owner, via the Chief of Staff |
+| `bootstrap flow apply --words … --question …` | record your yes to a flow change | Chief of Staff |
+| `/upgrade` or `bootstrap upgrade`, then `bootstrap kit apply …` | refresh the kit from a newer plugin; record your yes to it | Chief of Staff |
+| `bootstrap family` | which sessions are on, which are optional; branches; helper limit | Chief of Staff |
 | `bootstrap brief <role>` | that role's rules and its part in the flow | Chief of Staff, at session start |
 | `bootstrap role <role>` | mark a worktree's session and apply its limits | each session, once |
 | `bootstrap piece <id> --suggest` / `--lane <lane>` | suggest / set a piece's lane | Chief of Staff |
@@ -402,7 +425,7 @@ How it stays light:
 
 | Tool | Skill | Team | Guard | Pre-push | Notes |
 |---|---|---|---|---|---|
-| Claude Code | ✅ | permanent nested sessions | ✅ | ✅ | full support |
+| Claude Code | ✅ | linked sessions under the Chief of Staff | ✅ | ✅ | full support |
 | Cursor | ✅ | `.cursor/agents` | manual | ✅ | subagents only have `readonly` |
 | Codex | ✅ | separate launches | `.codex/rules` | ✅ | no LSP; AGENTS.md ≤ 32 KiB |
 | GitHub Copilot | ✅ | `.github/agents` | manual | ✅ | cloud agent: MCP tools only |
@@ -422,8 +445,19 @@ The pre-push check works everywhere, because git runs it. Details and sources: [
 **Is it slow or heavy?** A session start costs about 2,000 tokens, and the guard adds about 0.1 seconds per
 command. For small projects, `--size prototype` or `small` uses a lighter flow.
 
-**Can I relax the rules?** Yes. Drag a reviewer's face off a checkpoint, switch presets, or add your own lanes. The
-Check tab warns you when a change leaves code unreviewed. Only company 🔒 minimums can't be loosened.
+**Can I relax the rules?** Yes. Make a session optional, untick a reviewer, or tell the Chief of Staff what to
+change. The Checks panel warns you when a change leaves code unreviewed, and every flow change needs your
+recorded yes. Only company 🔒 minimums can't be loosened.
+
+**My project has no dev branch, or uses `master`.** That's fine. The live branch is detected, and without a
+dev branch, pieces go to live through a release with the same sign-offs checked there.
+
+**How do I upgrade the kit in a project that already has it?** Update the plugin, then type `/upgrade` to the
+Chief of Staff. It refreshes the kit's own files (your policy, flow and records stay), tells you what changes,
+and on your yes records it and pushes. A kit change without your yes, or edited after it, is refused.
+
+**Do I have to approve pushes in every session?** No. Sessions push without a permission click; the pre-push
+check refuses anything without its sign-offs or your recorded word. You only answer the Chief of Staff.
 
 **What if a session ignores the rules?** Then its push is refused, with the reason. The rules that matter are
 checked by tools, not trusted to the assistant.
@@ -445,12 +479,13 @@ checked by tools, not trusted to the assistant.
 skills/bootstrap-environment/   the skill (Agent Skills format) + references opened per phase
 bin/                            bootstrap, guard, prepush, mem, detect-stack, adapt, flow-ui (Node ≥18, no deps)
 flow/defaults.json · rules.json built-in lanes, gates, conditions, words · every rule with its reason
-ui/flow-editor.html             the visual editor
+ui/flow-editor.html             the flow editor
+commands/                       the /flow and /upgrade commands
 roles/                          one brief per session
 templates/                      AGENTS.md, board, register, memory, lesson
 githooks/pre-push · hooks/      the push check · the Claude Code guard hook
 docs/                           compatibility matrix, playbook, screenshots
-tests/                          npm test (63 tests)
+tests/                          npm test (74 tests)
 ```
 
 ## Contributing

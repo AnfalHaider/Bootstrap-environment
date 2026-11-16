@@ -4,14 +4,26 @@
 
 ## Phase 7 — SESSION FAMILY
 
+**How the family runs (0.6).**
+- **One contact.** The owner talks only to the Chief of Staff. It starts the others as linked sessions; they report to it (finished, failed, blocked) and never ask the owner directly.
+- **On and optional.** Sessions marked On in the flow start at setup; Optional ones start when a piece needs their sign-off (`bootstrap next` names them) or the owner asks, and stop when done. `bootstrap family` lists both. Rules in the flow (extra checks) still require an optional session's sign-off, so Security is never skipped on login, payment, upload or secret files.
+- **Relayed decisions are records.** The Chief of Staff records the owner's words first (`approve`, `release`, `flow apply`, with `--relayed-by chief-of-staff`), commits and pushes, then messages the session the record's sha. Sessions act on the record; a message alone is not the owner's word. The push check reads the same records.
+- **No permission clicks for pushes.** `init` allows `git push` and the kit's commands in `.claude/settings.json`; the pre-push hook is the gate.
+- **Helpers.** At most `helpers.max_per_session` (default 2) helper agents per session, on `helpers.model` (default the cheapest); the guard refuses more, a bigger model, or a fork.
+- **Branches.** Live and dev come from `.bootstrap/policy.json`, detected at `init`. With no dev branch, sign-offs are checked on the push to live and the dev gate disappears from the flow.
+- **Kit upgrades.** `bootstrap upgrade` from the newer kit (`/upgrade`), tell the owner what changes, and on their yes `bootstrap kit apply`; commit the kit files with the record on their own. A kit-only push that matches the record passes; mixed with project code it needs the full flow.
+- **Flow changes.** The owner asks in chat or saves in the editor; the Chief of Staff reads the change back, and on their yes runs `bootstrap flow apply`. A flow-only commit with that record passes the push check.
+
+The rest of this file is the full role catalogue and the rules behind it.
+
 The owner talks to ONE session; it starts the others as nested (linked) sessions. Every task moves
 through a fixed lane. *Why:* with independent sessions, work went live before an independent check,
 briefs were written from memory, nobody wrote a lesson for a week, and the owner's words landed in the
 wrong chat.
 
-**7A. The roster.** Think of it as an IT company's staff. Nine core roles (including the Chief of
-Staff) start in every project; two on-demand roles start when the project has a live system or real
-users; project lanes are added per project. Role IDs never change (they are the log filenames and the
+**7A. The roster.** Think of it as an IT company's staff. Six roles are on from the start (Chief
+of Staff, Builder, QA, Design, Librarian, Researcher); the rest are optional and start when a piece
+needs them, the owner asks, or (Platform, Support) the project has a live system or real users; project lanes are added per project. Role IDs never change (they are the log filenames and the
 words in `AGENTS.md`). *Why the four added roles:* in the first family nobody owned security, code
 quality was read by a manager, nobody watched the running system until it broke, and nothing brought
 in what real users hit.

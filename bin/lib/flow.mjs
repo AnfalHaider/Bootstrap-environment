@@ -99,7 +99,9 @@ export function loadLayers(root, { ref = null } = {}) {
     const rel = !isAbsolute(ext.path) ? ext.path.replace(/^\.\//, '') : null;
     company = rel && ref ? readJson(root, rel, ref) : (existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : null);
   }
-  return { builtin: builtin(), company, project, extends: ext, briefs: briefRoles(root) };
+  let branches = { live: 'main', dev: 'dev' };
+  try { if (root) branches = { ...branches, ...JSON.parse(readFileSync(join(root, '.bootstrap', 'policy.json'), 'utf8')).branches }; } catch { /* defaults */ }
+  return { builtin: builtin(), company, project, extends: ext, briefs: briefRoles(root), branches };
 }
 
 // ---------- merge ----------
@@ -131,6 +133,8 @@ export function merge(layers) {
     f.blocked_sources = uniq([...(f.blocked_sources || []), ...(layer.blocked_sources || [])]);
     if (layer.branches) f.branches = { ...(f.branches || {}), ...layer.branches };
     if (layer.naming) f.naming = layer.naming;
+    if (layer.family) f.family = { ...(f.family || {}), ...layer.family };
+    if (layer.helpers) f.helpers = { ...(f.helpers || {}), ...layer.helpers };
   }
   // roles: briefs → company defaults → project
   const roles = clone(briefs);
@@ -149,6 +153,12 @@ export function merge(layers) {
       ? { ...s, ok: false, blocked: true, kind: 'Blocked by company', why: 'Blocked in the company defaults; it will never be installed.' } : s));
   }
   f.roles = roles;
+  // The project's real branches: gates are named after them, and with no dev branch the dev gate goes away.
+  f.branches = { live: 'main', dev: 'dev', ...(layers.branches || {}) };
+  for (const l of f.lanes) {
+    if (!f.branches.dev) l.stages = l.stages.filter((s) => !(s.kind === 'gate' && s.gate === 'dev'));
+    for (const s of l.stages) if (s.kind === 'gate') s.title = s.gate === 'dev' ? `Push to ${f.branches.dev}` : `Push to ${f.branches.live}`;
+  }
   // floor: company minimums are added back no matter what the project says (enforcement never loosens)
   for (const l of f.lanes) {
     if (l.live_exempt_signoffs) continue;
@@ -273,7 +283,7 @@ export function validate(layers, flow) {
     if (hasLive && !l.stages.some((s) => s.kind === 'word' && s.word === l.live_word)) add('warning', `Lane "${l.name}" has no "${l.live_word}" step drawn before Push live.`, 'Add the word step so sessions see where it is needed.', `flow:${l.id}`);
     for (const s of l.stages) if (s.kind === 'stage' && !flow.roles[s.role]) add('error', `Lane "${l.name}" has a stage owned by "${s.role}", which is not a session.`, 'Pick a session for it, or add that session.', `flow:${l.id}`);
     if (l.stages.some((s) => s.with_previous && s.kind !== 'stage')) add('info', `Lane "${l.name}": only session steps can run side by side; a checkpoint or your word always stands alone.`, '', `flow:${l.id}`);
-    if (!l.live_exempt_signoffs && hasDev) {
+    if (!l.live_exempt_signoffs && (hasDev || hasLive)) {
       if (!(l.dev_signoffs || []).length) add('error', `Lane "${l.name}" lets code reach dev with no sign-offs at all.`, 'Tick at least one reviewer in Gates.', `gates:${l.id}`);
       else if (!(l.dev_signoffs || []).some((r) => REVIEWERS.includes(r))) add('warning', `Lane "${l.name}" lets code reach dev without QA, Tech Lead or Security signing. Nobody reviews the code.`, 'Tick Tech Lead or QA for this lane in Gates.', `gates:${l.id}`);
     }
@@ -312,7 +322,7 @@ export function renderMarkdown(flow) {
       }
     });
     lines.push('```', '');
-    if (!l.live_exempt_signoffs) lines.push(`Dev gate sign-offs: ${(l.dev_signoffs || []).map(name).join(', ') || 'none'}`);
+    if (!l.live_exempt_signoffs) lines.push(`Sign-offs before ${flow.branches.dev || flow.branches.live}: ${(l.dev_signoffs || []).map(name).join(', ') || 'none'}`);
     else lines.push('Dev gate: exempt (live breakage only).');
     lines.push(`Live word: ${l.live_word || '—'}`, '');
   }

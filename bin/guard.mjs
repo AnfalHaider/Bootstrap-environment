@@ -9,13 +9,15 @@
 // Output: exit 0 = allow. Exit 2 + reason on stderr = block (Claude Code, Codex and
 // Copilot-style hooks all treat exit 2 as "deny and tell the agent why").
 // Not bootstrapped (no .bootstrap/policy.json) = always allow, silently.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { loadFlow } from './lib/flow.mjs';
 import { currentRole, git, loadPolicy, loadRole, matchesAny, repoRoot, toRepoPath } from './lib/policy.mjs';
 
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'write_file', 'replace', 'edit_file']);
+const AGENT_TOOLS = new Set(['Agent', 'Task']);
+const MODEL_RANK = { haiku: 1, sonnet: 2, opus: 3, fable: 3 };
 const SHELL_TOOLS = new Set(['Bash', 'PowerShell', 'shell', 'run_shell_command', 'run_terminal_cmd']);
 
 export function pushTargets(command, cwd) {
@@ -60,6 +62,7 @@ export function recordRule(rel, role, policy) {
       : `${rel} is ${name}'s sign-off. A session signs only as itself (you are "${role}"). Ask ${name} to review and sign.`;
   }
   if (rel.startsWith(`${sd}/`)) return role === 'chief-of-staff' ? null : `${rel}: only the Chief of Staff manages sign-off folders.`;
+  if (rel.startsWith('docs/flow-changes/') || rel.startsWith('docs/kit-changes/')) return role === 'chief-of-staff' ? null : `${rel} is a record of the owner's yes to a ${rel.includes('kit-') ? 'kit upgrade' : 'flow change'}. Only the Chief of Staff writes it (you are "${role}").`;
   if (rel.startsWith(`${policy.releases.dir.replace(/\/$/, '')}/`)) return RELEASE_WRITERS.includes(role) ? null
     : `${rel} is a release record. Only ${RELEASE_WRITERS.join(' / ')} writes it (you are "${role}").`;
   return null;
@@ -69,11 +72,12 @@ function shellRecordCheck(command, role, policy) {
   if (/\bBOOTSTRAP_ROLE\s*=|\$env:BOOTSTRAP_ROLE/.test(command)) return 'Setting BOOTSTRAP_ROLE in a command is not allowed: a session acts only as its own role (`bootstrap role` sets it once per worktree).';
   if (/\.bootstrap[\\/]session\.json/.test(command) && WRITE_OPS.test(command) && !/bootstrap(\.mjs)?\s+role\b/.test(command)) return 'Changing .bootstrap/session.json by hand is not allowed; the session role is set once with `bootstrap role`.';
   // The toolkit's own record commands
-  const cli = /bootstrap(?:\.mjs)?\s+(signoff|require|piece|approve|release)\b(.*)$/m.exec(command);
+  const cli = /bootstrap(?:\.mjs)?\s+(signoff|require|piece|approve|release|flow\s+apply|kit\s+apply|upgrade)\b(.*)$/m.exec(command);
   if (cli) {
-    const [, sub, rest] = cli;
+    const [, rawSub, rest] = cli;
+    const sub = rawSub.replace(/\s+/g, ' ');
     if (sub === 'signoff') { const as = /--role\s+(\S+)/.exec(rest); if (as && as[1] !== role) return `Signing as "${as[1]}" is not allowed; you are "${role}". A session signs only as itself.`; if (role === 'unassigned') return 'This session has no role; run `bootstrap role <id>` first. Only the owner signs outside a session.'; }
-    const who = { require: RECORD_WRITERS._required, piece: RECORD_WRITERS._piece, approve: RECORD_WRITERS._approve, release: RELEASE_WRITERS }[sub];
+    const who = { 'flow apply': ['chief-of-staff'], 'kit apply': ['chief-of-staff'], upgrade: ['chief-of-staff'], require: RECORD_WRITERS._required, piece: RECORD_WRITERS._piece, approve: RECORD_WRITERS._approve, release: RELEASE_WRITERS }[sub];
     if (who && !who.includes(role)) return `\`bootstrap ${sub}\` is for ${who.join(' / ')} only (you are "${role}").`;
   }
   // Raw writes into the record folders
@@ -85,7 +89,24 @@ function shellRecordCheck(command, role, policy) {
   return null;
 }
 
-export function decide({ tool, command = '', filePath = '', cwd = process.cwd() }) {
+// Helper agents: at most N per session, on the cheapest model (flow.helpers). Counted per session id in
+// .bootstrap/helpers/ (git-ignored); an allowed start is counted, a refused one is not.
+function helperCheck(root, flow, { sessionId, model, subagentType }) {
+  const h = { max_per_session: 2, model: 'haiku', ...((flow && flow.helpers) || {}) };
+  if (!h.max_per_session) return 'This project allows no helper agents: do the work in this session.';
+  if (subagentType === 'fork') return `A fork runs on this session's own model. Start a helper with model: "${h.model}" instead.`;
+  const want = MODEL_RANK[h.model] || 1;
+  if (!model || !MODEL_RANK[String(model).toLowerCase()]) return `Helpers must name the cheapest model: pass model: "${h.model}".`;
+  if (MODEL_RANK[String(model).toLowerCase()] > want) return `Helpers run on the cheapest model (${h.model}), not ${model}. Pass model: "${h.model}".`;
+  const id = String(sessionId || 'unknown').replace(/[^\w-]/g, '_');
+  const dir = join(root, '.bootstrap', 'helpers'), f = join(dir, `${id}.json`);
+  let n = 0; try { n = JSON.parse(readFileSync(f, 'utf8')).started || 0; } catch { /* first */ }
+  if (n >= h.max_per_session) return `This session already started ${n} helper agent${n === 1 ? '' : 's'}, the most this project allows (${h.max_per_session}). Do the rest yourself.`;
+  try { mkdirSync(dir, { recursive: true }); writeFileSync(f, JSON.stringify({ started: n + 1 }) + '\n'); } catch { /* counting is best effort */ }
+  return null;
+}
+
+export function decide({ tool, command = '', filePath = '', cwd = process.cwd(), sessionId = null, model = null, subagentType = null }) {
   // MSYS-style "/c/Users/..." from Git Bash means C:\Users\... on Windows.
   if (process.platform === 'win32') cwd = cwd.replace(/^\/([a-zA-Z])\//, '$1:/');
   // A cwd we cannot place must not switch the guard off: fall back to where the hook runs.
@@ -99,6 +120,12 @@ export function decide({ tool, command = '', filePath = '', cwd = process.cwd() 
   let brief = loadRole(root, role) || {};
   if (existsSync(join(root, '.bootstrap', 'flow.json'))) {
     try { const r = loadFlow(root).flow.roles[role]; if (r) brief = { ...brief, ...r, deny_commands: r.deny_commands || brief.deny_commands }; } catch { /* keep the brief */ }
+  }
+
+  if (AGENT_TOOLS.has(tool)) {
+    let flow = null; try { flow = loadFlow(root).flow; } catch { /* defaults */ }
+    const why = helperCheck(root, flow, { sessionId, model, subagentType });
+    return why ? { allow: false, reason: `Blocked: ${why}` } : { allow: true };
   }
 
   if (SHELL_TOOLS.has(tool)) {
@@ -147,6 +174,9 @@ function main() {
     command: input.command || '',
     filePath: input.file_path || input.path || input.notebook_path || '',
     cwd: payload.cwd || process.cwd(),
+    sessionId: payload.session_id || payload.sessionId || null,
+    model: input.model || null,
+    subagentType: input.subagent_type || null,
   });
   if (res.allow) process.exit(0);
   process.stderr.write(res.reason + '\n');

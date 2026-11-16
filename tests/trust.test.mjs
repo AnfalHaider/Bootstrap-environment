@@ -31,7 +31,7 @@ before(() => {
   execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repo });
   sh(['config', 'user.email', 'test@example.invalid']);
   sh(['config', 'user.name', 'test']);
-  assert.equal(cli(['init']).status, 0);
+  assert.equal(cli(['init', '--dev', 'dev']).status, 0);
   write('src/app.js', 'export const a = 1;\n');
   base = commit('base');
 });

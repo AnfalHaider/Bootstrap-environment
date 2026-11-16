@@ -12,6 +12,7 @@
 //     the owner's words, the question asked, and a pasted pre-release check
 //   * hotfix role is exempt from sign-offs (not from the release record)
 //   * deleting live or dev is refused
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { parseFrontmatter } from './lib/fm.mjs';
@@ -28,6 +29,47 @@ const ZERO = /^0+$/;
 const KIT_GLOBS = ['.bootstrap/**', '.githooks/**', '.claude/settings.json', '.gitignore', 'AGENTS.md', 'CLAUDE.md',
   'GEMINI.md', '.aider.conf.yml', '.cursor/**', '.codex/**', '.agents/**', '.kiro/**', '.clinerules/**',
   '.github/copilot-instructions.md', '.github/agents/**', 'chatgpt-export/**', 'scripts/bootstrap', 'scripts/bootstrap.*'];
+
+// Flow changes: commits that change only the flow (plus docs) need the owner's recorded word, not a
+// piece. The Chief of Staff writes it with `bootstrap flow apply`; it names the sha256 of the exact flow.json
+// (and company.json, if any) the owner said yes to, so a later edit is not covered by an old yes.
+export const FLOW_FILES = ['.bootstrap/flow.json', '.bootstrap/company.json'];
+export const FLOW_CHANGES_DIR = 'docs/flow-changes';
+export const hashText = (t) => createHash('sha256').update(String(t ?? '').replace(/\r\n/g, '\n').trimEnd()).digest('hex');
+export function flowChangeRecord(root, sha) {
+  const flowHash = hashText(show(root, sha, '.bootstrap/flow.json'));
+  const comp = show(root, sha, '.bootstrap/company.json');
+  for (const f of lsTree(root, sha, FLOW_CHANGES_DIR).filter((x) => x.endsWith('.md'))) {
+    const { data } = parseFrontmatter(show(root, sha, f));
+    if (!data || data.flow_sha256 !== flowHash) continue;
+    if ((data.company_sha256 || '') !== (comp ? hashText(comp) : '')) continue;
+    const missing = ['owner_words', 'question', 'said_at'].filter((k) => !data[k]);
+    return { file: f, problems: missing };
+  }
+  return null;
+}
+
+// Kit upgrades: the kit's own files (scripts, built-in flow and rules, editor, role briefs, hook, settings)
+// change when a newer kit is installed. Commits that change only these (plus docs and the flow) are covered
+// by the owner's recorded yes to the upgrade: `bootstrap kit apply` lists every kit file with its sha256,
+// and each changed file must match the record at the pushed commit. A later edit needs a new yes.
+export const KIT_UPGRADE_GLOBS = ['.bootstrap/bin/**', '.bootstrap/flow/**', '.bootstrap/ui/**', '.bootstrap/roles/**',
+  '.bootstrap/kit.json', '.githooks/**', '.claude/settings.json', '.gitignore'];
+export const KIT_CHANGES_DIR = 'docs/kit-changes';
+export function kitRecordFiles(root, sha) {
+  const ok = new Map(); const bad = [];
+  for (const f of lsTree(root, sha, KIT_CHANGES_DIR).filter((x) => x.endsWith('.md'))) {
+    const { data } = parseFrontmatter(show(root, sha, f));
+    if (!data) continue;
+    const missing = ['owner_words', 'question', 'said_at'].filter((k) => !data[k]);
+    if (missing.length) { bad.push(`${f} is missing: ${missing.join(', ')}`); continue; }
+    for (const item of Array.isArray(data.files) ? data.files : []) {
+      const i = String(item).lastIndexOf('@');
+      if (i > 0) (ok.get(item.slice(0, i)) || ok.set(item.slice(0, i), new Set()).get(item.slice(0, i))).add(item.slice(i + 1));
+    }
+  }
+  return { ok, bad };
+}
 
 function adoptedAt(root, remoteSha) {
   const has = (sha) => git(['cat-file', '-e', `${sha}:.bootstrap/policy.json`], root) !== null;
@@ -147,7 +189,7 @@ export function releaseRecordFor(root, treeSha, policy, wanted = treeSha) {
 export function checkPush({ root, policy, role, localSha, remoteRef, remoteSha }) {
   const errors = [];
   const branch = remoteRef.replace(/^refs\/heads\//, '');
-  const guarded = branch === policy.branches.live || branch === policy.branches.dev;
+  const guarded = branch === policy.branches.live || (!!policy.branches.dev && branch === policy.branches.dev);
 
   if (ZERO.test(localSha)) {
     if (guarded) errors.push(`refusing to delete "${branch}"`);
@@ -169,7 +211,7 @@ export function checkPush({ root, policy, role, localSha, remoteRef, remoteSha }
 
   const filesOf = (c) => (git(['diff-tree', '--no-commit-id', '--name-only', '-r', '-m', '--root', c], root) || '')
     .split('\n').filter(Boolean);
-  const codeCommits = commits.filter((c) => filesOf(c).some((f) => !matchesAny(f, policy.docs_globs)));
+  let codeCommits = commits.filter((c) => filesOf(c).some((f) => !matchesAny(f, policy.docs_globs)));
 
   // Adoption: the first push of the kit itself, before the remote side has any rules.
   if (codeCommits.length && !adoptedAt(root, remoteSha)) {
@@ -179,6 +221,34 @@ export function checkPush({ root, policy, role, localSha, remoteRef, remoteSha }
     errors.push(`the kit is not on "${branch}" yet, so this push adopts it: push the kit on its own first, then the rest goes through the flow. ` +
       `Outside the kit: ${outside.slice(0, 5).join(', ')}${outside.length > 5 ? ` and ${outside.length - 5} more` : ''}`);
     return errors;
+  }
+
+  // Commits that change only the flow and/or the kit are covered by the owner's recorded yes instead of a piece.
+  const isFlow = (f) => FLOW_FILES.includes(f), isKit = (f) => matchesAny(f, KIT_UPGRADE_GLOBS);
+  const configOnly = codeCommits.filter((c) => filesOf(c).every((f) => matchesAny(f, policy.docs_globs) || isFlow(f) || isKit(f)));
+  if (configOnly.length) {
+    const changed = [...new Set(configOnly.flatMap(filesOf))];
+    const short = configOnly.map((c) => c.slice(0, 9)).join(', ');
+    if (changed.some(isFlow)) {
+      const rec = flowChangeRecord(root, localSha);
+      if (!rec) errors.push(`${configOnly.length} commit(s) change the flow (${short}) with no record of the owner's yes for this exact flow in ${FLOW_CHANGES_DIR}/. The Chief of Staff reads the change back to the owner and runs \`bootstrap flow apply\``);
+      else if (rec.problems.length) errors.push(`${rec.file} is missing: ${rec.problems.join(', ')}`);
+      else {
+        const { findings } = loadFlow(root, { ref: localSha });
+        const bad = findings.filter((f) => f.level === 'error');
+        if (bad.length) errors.push(`the new flow has errors: ${bad.map((f) => f.msg).join(' | ')}`);
+      }
+    }
+    const kitFiles = changed.filter((f) => isKit(f) && !matchesAny(f, policy.docs_globs));
+    if (kitFiles.length) {
+      const { ok, bad } = kitRecordFiles(root, localSha);
+      errors.push(...bad);
+      const exists = (f) => git(['cat-file', '-e', `${localSha}:${f}`], root) !== null;
+      const uncovered = kitFiles.filter((f) => !(ok.get(f) || new Set()).has(exists(f) ? hashText(show(root, localSha, f)) : 'deleted'));
+      if (uncovered.length) errors.push(`${uncovered.length} kit file(s) changed (${short}) with no record of the owner's yes for these exact files in ${KIT_CHANGES_DIR}/: ${uncovered.slice(0, 5).join(', ')}${uncovered.length > 5 ? ` and ${uncovered.length - 5} more` : ''}. The Chief of Staff tells the owner what the upgrade changes and runs \`bootstrap kit apply\``);
+    }
+    codeCommits = codeCommits.filter((c) => !configOnly.includes(c));
+    if (errors.length) return errors;
   }
 
   if (branch === policy.branches.live) {

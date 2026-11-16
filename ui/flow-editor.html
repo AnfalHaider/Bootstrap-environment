@@ -3,835 +3,376 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Flow Editor</title>
+<title>Project Flow</title>
 <style>
 :root{
-  --paper:#F7F6F2;--card:#fff;--ink:#1F1D1A;--ink2:#55514A;--ink3:#7A756C;--line:#DDD9D0;--line2:#C7C2B6;
-  --accent:#9A3B1E;--accent-soft:#F3E2DA;--ok:#2C6E49;--ok-soft:#E1F0E6;--warn:#8A5A00;--warn-soft:#FBEFD5;--bad:#A12C2C;--bad-soft:#F7E0E0;
-  --display:Georgia,"Times New Roman",serif;--text:"Segoe UI",system-ui,-apple-system,sans-serif;--mono:Consolas,"SF Mono",ui-monospace,monospace;
-  --r-core:#9A3B1E;--r-review:#2D4B7A;--r-docs:#5B6B3A;--r-ops:#6A4C93;--r-owner:#1F1D1A;--r-custom:#7A756C;--glow:#E8B04B;
+  --paper:#F6F4EF;--card:#FFFFFF;--sunk:#EFECE5;--ink:#1D1B18;--ink2:#524E47;--ink3:#7D776D;--line:#E2DDD3;--line2:#CCC6B9;
+  --accent:#9A3B1E;--accent-ink:#FFFFFF;--accent-soft:#F4E3DA;
+  --ok:#2C6E49;--ok-soft:#E2F0E7;--warn:#8A5A00;--warn-soft:#FBEFD5;--bad:#A12C2C;--bad-soft:#F7E1E1;
+  --on:#2C6E49;--opt:#8A5A00;--off:#A8A296;
+  --display:Georgia,"Iowan Old Style","Times New Roman",serif;--text:"Segoe UI",system-ui,-apple-system,sans-serif;--mono:Consolas,"SF Mono",ui-monospace,monospace;
+  --shadow:0 1px 2px rgba(30,25,15,.05),0 4px 16px rgba(30,25,15,.05);
   color-scheme:light;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#121210;--card:#1B1B18;--ink:#ECE9E2;--ink2:#B8B3A8;--ink3:#8E897E;--line:#2C2B27;--line2:#3C3A34;--accent:#E07A52;--accent-soft:#3A2419;--ok:#6BC28E;--ok-soft:#16281D;--warn:#E8C778;--warn-soft:#2E2614;--bad:#F08A8A;--bad-soft:#341818;--r-core:#E07A52;--r-review:#8FB0E8;--r-docs:#A9BF7A;--r-ops:#B79BE0;--r-owner:#ECE9E2;color-scheme:dark}}
-:root[data-theme="dark"]{--paper:#121210;--card:#1B1B18;--ink:#ECE9E2;--ink2:#B8B3A8;--ink3:#8E897E;--line:#2C2B27;--line2:#3C3A34;--accent:#E07A52;--accent-soft:#3A2419;--ok:#6BC28E;--ok-soft:#16281D;--warn:#E8C778;--warn-soft:#2E2614;--bad:#F08A8A;--bad-soft:#341818;--r-core:#E07A52;--r-review:#8FB0E8;--r-docs:#A9BF7A;--r-ops:#B79BE0;--r-owner:#ECE9E2;color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#131311;--card:#1C1C19;--sunk:#171715;--ink:#ECE9E2;--ink2:#B9B4A9;--ink3:#8C877C;--line:#2D2C28;--line2:#3E3C36;--accent:#E07A52;--accent-ink:#1B120D;--accent-soft:#3A2419;--ok:#6BC28E;--ok-soft:#16281D;--warn:#E8C778;--warn-soft:#2E2614;--bad:#F08A8A;--bad-soft:#341818;--on:#6BC28E;--opt:#E8C778;--off:#5E5A52;--shadow:none;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#131311;--card:#1C1C19;--sunk:#171715;--ink:#ECE9E2;--ink2:#B9B4A9;--ink3:#8C877C;--line:#2D2C28;--line2:#3E3C36;--accent:#E07A52;--accent-ink:#1B120D;--accent-soft:#3A2419;--ok:#6BC28E;--ok-soft:#16281D;--warn:#E8C778;--warn-soft:#2E2614;--bad:#F08A8A;--bad-soft:#341818;--on:#6BC28E;--opt:#E8C778;--off:#5E5A52;--shadow:none;color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 var(--text)}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;background:var(--paper);color:var(--ink);font:14.5px/1.55 var(--text);-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
-header{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
-header h1{font:600 20px var(--display);margin:0}
-header .proj{font:12px var(--mono);color:var(--ink3);overflow-wrap:anywhere}
-header .sp{flex:1}
-.btn{border:1px solid var(--line2);background:var(--card);border-radius:8px;padding:6px 12px;cursor:pointer}
-.btn:hover{border-color:var(--ink3)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.small{padding:3px 9px;font-size:12.5px}
-.btn.danger{color:var(--bad)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font:12.5px var(--mono);background:var(--sunk);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+
+/* header */
+header{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.hwrap{max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand h1{font:600 21px var(--display);margin:0;letter-spacing:-.01em}
+.brand .where{font:12px var(--mono);color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46vw}
+nav{display:flex;gap:2px;margin-left:auto;overflow-x:auto}
+nav a{color:var(--ink2);text-decoration:none;padding:6px 11px;border-radius:8px;white-space:nowrap;font-size:13.5px}
+nav a:hover{background:var(--sunk);color:var(--ink)}
+.icon-btn{border:1px solid var(--line2);background:var(--card);border-radius:8px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;color:var(--ink2)}
+
+/* layout */
+main{max-width:1180px;margin:0 auto;padding:28px 20px 120px;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:28px;align-items:start}
+.col{display:flex;flex-direction:column;gap:40px;min-width:0}
+aside{position:sticky;top:84px;display:flex;flex-direction:column;gap:16px}
+section h2{font:600 22px var(--display);margin:0 0 4px;letter-spacing:-.01em}
+section .lede{color:var(--ink2);margin:0 0 18px;max-width:64ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+
+/* hero */
+.hero{padding:22px 22px 14px}
+.hero h2{font-size:26px}
+.hero svg{width:100%;height:auto;display:block;margin-top:6px}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--ink3);padding:4px 2px 0}
+.legend i{display:inline-block;width:22px;height:0;border-top:2px solid var(--on);vertical-align:middle;margin-right:6px}
+.legend i.opt{border-top:2px dashed var(--opt)}
+svg .n rect{fill:var(--card);stroke-width:1.5}
+svg .n text{font:600 13px var(--text);fill:var(--ink)}
+svg .n.on rect{stroke:var(--on)}
+svg .n.optional rect{stroke:var(--opt);stroke-dasharray:5 4}
+svg .n.optional text{fill:var(--ink2);font-weight:500}
+svg .n{cursor:pointer}
+svg .n:hover rect{fill:var(--sunk)}
+svg .edge{fill:none;stroke-width:1.5}
+svg .edge.on{stroke:var(--on);opacity:.55}
+svg .edge.optional{stroke:var(--opt);stroke-dasharray:5 5;opacity:.6}
+svg .cos rect{fill:var(--accent);stroke:none}
+svg .cos text{fill:var(--accent-ink);font:600 15px var(--display)}
+svg .you circle{fill:var(--ink)}
+svg .you text{fill:var(--paper);font:600 13px var(--text)}
+svg .lbl{font:12px var(--text);fill:var(--ink3)}
+svg .main-edge{stroke:var(--ink);stroke-width:2;fill:none}
+
+/* team */
+.sub{font:600 12px var(--text);text-transform:uppercase;letter-spacing:.07em;color:var(--ink3);margin:18px 0 10px}
+.team{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.role{padding:14px 14px 12px;display:flex;flex-direction:column;gap:8px;transition:border-color .15s}
+.role.is-off{background:var(--sunk);box-shadow:none}
+.role.is-off .rname,.role.is-off .job{opacity:.6}
+.rtop{display:flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--off)}
+.is-on .dot{background:var(--on)} .is-optional .dot{background:transparent;border:2px solid var(--opt)}
+.rname{font-weight:600}
+.rmodel{margin-left:auto;font-size:11.5px;color:var(--ink3)}
+.job{color:var(--ink2);font-size:13px;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--sunk);border:1px solid var(--line);border-radius:9px;padding:2px}
+.seg button{all:unset;cursor:pointer;text-align:center;padding:4px 0;border-radius:7px;font-size:12.5px;color:var(--ink2)}
+.seg button:focus-visible{outline:2px solid var(--accent)}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.seg button[aria-pressed=true][data-v=on]{color:var(--on)}
+.seg button[aria-pressed=true][data-v=optional]{color:var(--opt)}
+.locked{font-size:12.5px;color:var(--accent);font-weight:600;padding:5px 0 1px}
+details.tools summary{cursor:pointer;font-size:12.5px;color:var(--ink3);list-style:none}
+details.tools summary::before{content:"+ "} details.tools[open] summary::before{content:"− "}
+details.tools textarea{margin-top:6px}
+
+/* rules + lanes */
+.stack{display:flex;flex-direction:column;gap:12px}
+.rule{padding:16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:start}
+.rule h3,.lane h3{margin:0;font-size:15px}
+.rule .when{color:var(--ink2);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line2);background:var(--card);border-radius:999px;padding:3px 11px;font-size:12.5px;cursor:pointer;color:var(--ink2)}
+.chip[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}
+.chip.static{cursor:default}
+.word{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;background:var(--ink);color:var(--paper);border-radius:999px;padding:3px 11px;font-weight:600}
+.word.soft{background:var(--sunk);color:var(--ink2);border:1px solid var(--line);font-weight:500}
+.globs{grid-column:1/-1}
+.globs summary{cursor:pointer;font-size:12.5px;color:var(--ink3)}
+textarea{width:100%;border:1px solid var(--line2);background:var(--paper);border-radius:9px;padding:8px 10px;resize:vertical;font:12.5px/1.6 var(--mono)}
+select,input[type=number]{border:1px solid var(--line2);background:var(--card);border-radius:8px;padding:5px 9px}
+.lane{padding:16px;display:flex;flex-direction:column;gap:12px}
+.lhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.lhead .when{color:var(--ink3);font-size:13px}
+.pipe{display:flex;align-items:center;flex-wrap:wrap;row-gap:8px;padding:2px 0}
+.step{flex:none;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:5px 10px;font-size:12.5px;white-space:nowrap}
+.step.gate{background:var(--sunk);font-weight:600;border-style:dashed}
+.step.w{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+.step.off{opacity:.45;text-decoration:line-through}
+.arrow{flex:none;width:18px;height:1px;background:var(--line2);position:relative}
+.arrow::after{content:"";position:absolute;right:-1px;top:-3px;border:3.5px solid transparent;border-left:5px solid var(--line2)}
+.row{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center}
+.row .k{font-size:12.5px;color:var(--ink3);min-width:118px}
+
+/* helpers */
+.helpers{padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:10px;overflow:hidden;background:var(--card)}
+.stepper button{all:unset;cursor:pointer;width:34px;height:34px;display:grid;place-items:center;font-size:17px;color:var(--ink2)}
+.stepper button:hover{background:var(--sunk)}
+.stepper b{min-width:34px;text-align:center;font:600 18px var(--display)}
+.hk{font-size:12.5px;color:var(--ink3);margin-bottom:6px}
+.hnote{font-size:12.5px;color:var(--ink2);margin:8px 0 0}
+
+/* aside */
+.panel{padding:16px}
+.panel h3{margin:0 0 4px;font:600 16px var(--display)}
+.panel p{margin:0 0 10px;color:var(--ink2);font-size:13px}
+.checks{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.checks label{display:flex;gap:8px;align-items:flex-start;font-size:13px;cursor:pointer}
+.checks input{margin-top:3px;accent-color:var(--accent)}
+.result{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.result .k{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3)}
+.finding{display:flex;gap:8px;font-size:13px;padding:7px 0;border-top:1px solid var(--line)}
+.finding:first-of-type{border-top:0}
+.lv{flex:none;font-size:11px;font-weight:700;text-transform:uppercase;border-radius:5px;padding:1px 6px;height:fit-content}
+.lv.error{background:var(--bad-soft);color:var(--bad)}.lv.warning{background:var(--warn-soft);color:var(--warn)}.lv.info{background:var(--sunk);color:var(--ink2)}.lv.ok{background:var(--ok-soft);color:var(--ok)}
+
+/* save bar */
+.savebar{position:fixed;left:50%;bottom:18px;transform:translate(-50%,140%);transition:transform .25s ease;z-index:20;background:var(--ink);color:var(--paper);border-radius:14px;padding:10px 10px 10px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:calc(100vw - 32px)}
+.savebar.show{transform:translate(-50%,0)}
+.savebar span{font-size:13.5px}
+.btn{border:1px solid var(--line2);background:var(--card);border-radius:9px;padding:7px 14px;cursor:pointer;font-weight:600}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;border-color:transparent;color:inherit;opacity:.8}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-select,input[type=text],textarea{border:1px solid var(--line2);background:var(--card);border-radius:8px;padding:6px 9px;min-width:0;max-width:100%}
-textarea{width:100%;resize:vertical;font:12.5px/1.5 var(--mono)}
-.badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:500;border:0}
-.b-ok{background:var(--ok-soft);color:var(--ok)}.b-warn{background:var(--warn-soft);color:var(--warn)}.b-bad{background:var(--bad-soft);color:var(--bad)}.b-mute{background:var(--line);color:var(--ink2)}
-button.badge{cursor:pointer}
-.tabs{display:flex;gap:2px;overflow-x:auto;max-width:100%}
-.tabs button{all:unset;cursor:pointer;padding:6px 12px;border-radius:8px;color:var(--ink2);white-space:nowrap;display:inline-flex;gap:6px}
-.tabs button[aria-selected=true]{background:var(--accent-soft);color:var(--ink);font-weight:600}
-.tabs button:focus-visible,.node:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-main{padding:20px clamp(16px,3vw,32px) 60px;min-width:0}
-main.flowmain{padding:0}
-/* ---------- canvas ---------- */
-.flowgrid{display:grid;grid-template-columns:184px minmax(0,1fr) 290px;min-height:calc(100vh - 64px)}
-.palette{background:var(--card);border-right:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;-webkit-user-select:none;user-select:none}
-.ph{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);margin-top:6px}
-.pchip{display:flex;align-items:center;gap:8px;padding:6px 9px;border:1px solid var(--line);border-radius:10px;background:var(--paper);cursor:grab;touch-action:none;font-size:13px}
-.pchip.block{border-style:dashed}
-.pchip .face{width:22px;height:22px;font-size:10px}
-.trash{margin-top:auto;border:2px dashed var(--line2);border-radius:10px;padding:12px;text-align:center;color:var(--ink3);font-size:12.5px}
-.trash.over{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
-.cmain{min-width:0;padding:14px 18px 30px;display:flex;flex-direction:column;gap:10px}
-.zoom{display:flex;gap:4px;align-items:center}
-.zoom span{font-size:12px;color:var(--ink3);min-width:38px;text-align:center}
-.hintbar{font-size:12.5px;color:var(--ink2);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
-.canvaswrap{position:relative;overflow-x:auto;overflow-y:hidden;background:radial-gradient(circle,var(--line) 1px,transparent 1px) 0 0/18px 18px,var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 18px 30px;min-height:320px;-webkit-user-select:none;user-select:none}
-.canvas{position:relative;display:flex;align-items:center;min-width:max-content}
-svg.links{position:absolute;inset:0;pointer-events:none;overflow:visible}
-svg.links path{fill:none;stroke:var(--line2);stroke-width:2}
-svg.links path.hot{stroke:var(--glow);stroke-width:3}
-svg.links path.temp{stroke:var(--accent);stroke-dasharray:6 5}
-.col{display:flex;flex-direction:column;gap:14px;padding:4px 0;border-radius:12px}
-.col.group{background:color-mix(in srgb,var(--accent-soft) 55%,transparent);padding:10px;outline:1px dashed var(--line2)}
-.glabel{font-size:11px;color:var(--ink3);text-align:center;margin-top:-4px}
-.gap{width:46px;align-self:stretch;display:flex;align-items:center;justify-content:center;position:relative}
-.gap .plus{width:22px;height:22px;border-radius:50%;border:1px solid var(--line2);background:var(--card);color:var(--ink3);font-size:15px;line-height:19px;padding:0;cursor:pointer;z-index:2;opacity:0;transition:opacity .15s}
-.canvaswrap:hover .gap .plus,.gap .plus:focus-visible{opacity:1}
-.gap.over::before{content:"";position:absolute;top:8%;bottom:8%;left:50%;width:4px;margin-left:-2px;border-radius:4px;background:var(--accent)}
-.node{position:relative;width:158px;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--rc,var(--line2));border-radius:12px;padding:9px 11px 10px;cursor:grab;touch-action:none;box-shadow:0 1px 2px rgba(0,0,0,.05);transition:box-shadow .15s}
-.node.sel{box-shadow:0 0 0 2px var(--accent)}
-.node.over{box-shadow:0 0 0 3px var(--accent)}
-.node.lit{box-shadow:0 0 0 3px var(--glow),0 0 18px color-mix(in srgb,var(--glow) 50%,transparent)}
-.node.dim{opacity:.45}
-.node.dragging{opacity:.35}
-.node .who{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)}
-.node .t{font-weight:600;margin-top:2px}
-.node .p{font-size:12px;color:var(--ink2)}
-.node.word{border:2px solid var(--r-owner);background:transparent}
-.node.gate{border:2px dashed var(--accent);background:var(--accent-soft)}
-.node.live{border:2px solid var(--ok);background:var(--ok-soft)}
-.handle{position:absolute;right:-8px;top:50%;margin-top:-8px;width:16px;height:16px;border-radius:50%;background:var(--card);border:2px solid var(--accent);cursor:crosshair;touch-action:none;z-index:3}
-.faces{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.face{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;background:var(--rc,var(--ink3));cursor:grab;touch-action:none;position:relative;flex:none}
-.face.locked::after{content:"🔒";position:absolute;right:-5px;bottom:-5px;font-size:10px}
-.face.extra{background:transparent;color:var(--ink);border:2px dashed var(--glow)}
-.facedrop{font-size:11px;color:var(--ink3);margin-top:4px}
-.ghost{position:fixed;pointer-events:none;z-index:50;opacity:.9;transform:translate(-50%,-50%) rotate(-2deg)}
-.side{background:var(--card);border-left:1px solid var(--line);padding:12px 14px 30px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
-.sh{font:600 12px var(--text);text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);margin:6px 0 0}
-.field{display:grid;gap:4px}
-.field label{font-size:12px;font-weight:600;color:var(--ink3)}
-.aplist{display:grid;gap:6px}
-.aprow{display:flex;align-items:center;gap:8px}
-.aprow .btn{margin-left:auto}
-.sim{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:8px;background:var(--paper)}
-.sim label{display:flex;gap:8px;align-items:center;font-size:13px}
-.result{border-radius:10px;padding:9px 11px;font-size:13px}
-.result.ok{background:var(--ok-soft);color:var(--ok)}
-.result.wait{background:var(--warn-soft);color:var(--warn)}
-.shake{animation:shake .35s}
-@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:70;padding:16px}
-.dialog{background:var(--card);border-radius:16px;max-width:520px;width:100%;padding:20px 22px;display:grid;gap:14px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
-.dialog h2{margin:0}
-.opts{display:grid;gap:8px}
-.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line2);border-radius:10px;padding:9px 11px;cursor:pointer}
-.opt:has(input:checked){border:2px solid var(--accent);padding:8px 10px}
-.opt small{display:block;color:var(--ink3)}
-h2{font:600 22px var(--display);margin:0 0 4px}
-h3{margin:18px 0 8px;font-size:15px}
-.lead{color:var(--ink2);margin:0 0 16px;max-width:78ch}
-.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.chip{border:1px solid var(--line2);border-radius:999px;padding:4px 12px;background:var(--card);cursor:pointer;font-size:13px}
-.chip[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.chip.add{border-style:dashed;color:var(--ink3)}
-.lane{margin-top:14px;display:flex;overflow-x:auto;padding:4px 2px 14px;align-items:stretch}
-.stage{flex:0 0 190px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:5px;border-top:4px solid var(--rc,var(--line2));cursor:pointer;text-align:left}
-.stage[aria-current=true]{box-shadow:0 0 0 2px var(--accent)}
-.stage .who{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--rc,var(--ink3));flex:none}
-.stage .t{font-weight:600}
-.stage .p{font-size:12.5px;color:var(--ink2)}
-.stage.gate{border:2px dashed var(--accent);background:var(--accent-soft)}
-.stage.gate .who{color:var(--accent)}
-.stage.word{border:2px solid var(--r-owner);background:transparent}
-.arrow{flex:0 0 22px;display:flex;align-items:center;justify-content:center;color:var(--ink3)}
-.addstage{flex:0 0 110px;border:1px dashed var(--line2);border-radius:12px;color:var(--ink3);cursor:pointer;background:transparent}
-.tag{font-size:11.5px;border-radius:6px;padding:1px 6px;background:var(--line);color:var(--ink2)}
-.tag.cond{background:var(--warn-soft);color:var(--warn)}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
-.split{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
-.rolelist{display:flex;flex-direction:column;gap:2px}
-.rolelist button.r{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px}
-.rolelist button.r[aria-selected=true]{background:var(--accent-soft);font-weight:600}
-.rolelist .cls{margin-left:auto;font:11px var(--mono);color:var(--ink3)}
-.form{display:grid;grid-template-columns:130px minmax(0,1fr);gap:10px 14px;align-items:start}
-.form>label{font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;padding-top:7px}
-.form .full{grid-column:1/-1}
-.kits{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.kit{display:inline-flex;align-items:center;gap:4px;font:12.5px var(--mono);border:1px solid var(--line2);border-radius:6px;padding:2px 4px 2px 8px;background:var(--paper)}
-.kit button{all:unset;cursor:pointer;color:var(--ink3);padding:0 4px}
-.src{display:grid;gap:4px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
-.src:first-child{border-top:0}
-.src code{font:12.5px var(--mono);overflow-wrap:anywhere}
-.src .why{color:var(--ink3);font-size:12px}
-.note{background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink2)}
-table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
-th{font-size:11.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;font-weight:600;white-space:nowrap}
-td.c,th.c{text-align:center}
-tr:last-child td{border-bottom:0}
-.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
-.find{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
-.find:first-child{border-top:0}
-.find .fix{font-size:12.5px;color:var(--ink3)}
-.sig{display:inline-block;width:20px;height:20px;border-radius:50%;line-height:20px;text-align:center;font-size:11px;font-weight:600}
-.s-ok{background:var(--ok-soft);color:var(--ok)}.s-no{background:var(--bad-soft);color:var(--bad)}.s-na{color:var(--ink3)}
-.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.preset{border:1px solid var(--line2);border-radius:12px;padding:12px 14px;background:var(--card);cursor:pointer;text-align:left}
-.preset[aria-pressed=true]{border:2px solid var(--accent);padding:11px 13px}
-.preset b{display:block;margin-bottom:2px}
-.preset span{color:var(--ink2);font-size:13px}
-.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;max-width:min(92vw,640px);font-size:13px;z-index:10}
-.empty{color:var(--ink3);font-size:13px}
-.hint{font-size:12.5px;color:var(--ink3);margin-top:3px;line-height:1.45}
-.intro{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:12px 14px;margin:0 0 16px;max-width:900px}
-.intro .ic{font-size:20px;line-height:1.2}
-.intro p{margin:0;color:var(--ink2)}
-.intro .ex{font-size:12.5px;color:var(--ink3);margin-top:4px}
-.welcome{background:var(--accent-soft);border-radius:14px;padding:16px 18px;margin:0 0 18px;display:grid;gap:10px;max-width:900px}
-.welcome h3{margin:0;font:600 17px var(--display)}
-.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.steps div{background:var(--card);border-radius:10px;padding:10px 12px;font-size:13px}
-.steps b{display:block;margin-bottom:2px}
-.term{all:unset;border-bottom:1px dotted var(--ink3);cursor:help}
-.term:focus-visible{outline:2px solid var(--accent)}
-.drawer{position:fixed;inset:0 0 0 auto;width:min(440px,100vw);background:var(--card);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.12);z-index:20;display:flex;flex-direction:column}
-.drawer header{position:static;border:0;border-bottom:1px solid var(--line)}
-.drawer .body{overflow-y:auto;padding:14px 18px 40px;display:grid;gap:14px}
-.drawer dt{font-weight:600}
-.drawer dd{margin:2px 0 0;color:var(--ink2);font-size:13.5px}
-.drawer dl{margin:0;display:grid;gap:12px}
-.drawer dt[data-hl]{background:var(--warn-soft);border-radius:6px;padding:0 4px}
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--ink2);margin-top:8px}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-@media (max-width:760px){.steps{grid-template-columns:1fr}}
-footer{font-size:12.5px;color:var(--ink3);margin-top:22px}
-@media (max-width:1000px){.flowgrid{grid-template-columns:170px minmax(0,1fr)}.side{grid-column:1/-1;border-left:0;border-top:1px solid var(--line)}}
-@media (max-width:760px){
-  header{gap:6px 8px;padding:8px 12px}
-  header .proj,#wizardBtn,#themeBtn{display:none}
-  #undoBtn,#redoBtn{font-size:0;padding:5px 10px}
-  #undoBtn::before{content:"↶";font-size:16px}
-  #redoBtn::before{content:"↷";font-size:16px}
-  .flowgrid{grid-template-columns:1fr}
-  .palette{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}
-  .palette .ph{display:none}
-  .pchip,.trash{flex:none;margin:0}
-  .split,.form,.grid2{grid-template-columns:1fr}
-  .rolelist{flex-direction:row;overflow-x:auto}
-  .rolelist button.r{white-space:nowrap}
-  .form>label{padding-top:0}
-}
+.toast{position:fixed;left:50%;top:76px;transform:translateX(-50%);background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow);z-index:30;max-width:min(560px,calc(100vw - 32px));font-size:13.5px}
+.toast b{display:block;margin-bottom:2px}
+
+@media (max-width:980px){main{grid-template-columns:minmax(0,1fr)}aside{position:static}}
+@media (max-width:640px){.hwrap{padding:10px 16px;flex-wrap:nowrap}main{padding:20px 16px 120px}nav{display:none}.rule{grid-template-columns:1fr}.brand .where{display:none}#theme{margin-left:auto}.hero h2{font-size:22px}.savebar{left:16px;right:16px;transform:translateY(140%)}.savebar.show{transform:none}.savebar span{flex:1}}
 </style>
 </head>
 <body>
-<header>
-  <div><h1 id="title">Flow editor</h1><div class="proj" id="proj">loading…</div></div>
-  <nav class="tabs" role="tablist" aria-label="Sections" id="nav"></nav>
-  <div class="sp"></div>
-  <span id="inherits"></span>
-  <span id="checkBadge" class="badge b-mute">checking…</span>
-  <button class="btn" id="undoBtn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
-  <button class="btn" id="redoBtn" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
-  <button class="btn" id="wizardBtn" title="Answer three questions to pick a starting flow">Start over</button>
-  <button class="btn" id="helpBtn" aria-haspopup="dialog">? Help</button>
-  <button class="btn" id="themeBtn" aria-label="Toggle light or dark theme">◐</button>
-  <button class="btn primary" id="saveBtn" disabled>Save</button>
-</header>
-<main id="main"></main>
-<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-<div class="modal" id="wizard" role="dialog" aria-modal="true" aria-labelledby="wzTitle" hidden>
-  <div class="dialog">
-    <div class="hint" id="wzStep">Question 1 of 3</div>
-    <h2 id="wzTitle"></h2>
-    <div class="opts" id="wzOpts"></div>
-    <div class="row" style="justify-content:flex-end"><button class="btn" id="wzSkip">Skip</button><button class="btn primary" id="wzNext">Next</button></div>
-  </div>
+<header><div class="hwrap">
+  <div class="brand"><h1>Project flow</h1><span class="where" id="where"></span></div>
+  <nav aria-label="Sections"><a href="#team">Team</a><a href="#checks">Extra checks</a><a href="#work">Kinds of work</a><a href="#helpers">Helpers</a></nav>
+  <button class="icon-btn" id="theme" title="Light or dark" aria-label="Switch light or dark">◐</button>
+</div></header>
+
+<main>
+  <div class="col" id="col"><div class="card hero"><p>Loading…</p></div></div>
+  <aside id="aside"></aside>
+</main>
+
+<div class="savebar" id="savebar" role="region" aria-label="Unsaved changes">
+  <span id="savemsg">You have unsaved changes</span>
+  <button class="btn ghost" id="undo">Discard</button>
+  <button class="btn primary" id="save">Save</button>
 </div>
-<aside id="drawer" class="drawer" role="dialog" aria-modal="false" aria-labelledby="drawerTitle" hidden>
-  <header><h1 id="drawerTitle" style="font-size:18px">Help: words used here</h1><div class="sp"></div><button class="btn" id="drawerClose" aria-label="Close help">✕</button></header>
-  <div class="body" id="drawerBody"></div>
-</aside>
+
 <script>
 const TOKEN = '__FLOW_TOKEN__';
-let S = null;                 // server state: {mode, project, company, flow, findings, presets, board}
-let tab = 'flow', lane = null, stageSel = null, roleSel = 'builder', dirty = false;
-const $ = (s, el = document) => el.querySelector(s);
+const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const GROUP = { 'chief-of-staff': 'r-owner', librarian: 'r-docs', researcher: 'r-docs', design: 'r-docs', support: 'r-docs', builder: 'r-core', hotfix: 'r-ops', 'release-ops': 'r-ops', platform: 'r-ops', qa: 'r-review', 'tech-lead': 'r-review', security: 'r-review' };
-const grp = (id) => GROUP[id] || (S.flow.roles[id] && S.flow.roles[id].class === 'lane' ? 'r-core' : 'r-custom');
-const rname = (id) => (S.flow.roles[id] ? S.flow.roles[id].name : id);
-const isCompany = () => S.mode === 'company';
-
-// Plain-language glossary. Every dotted-underlined word on the page opens its entry.
-const GLOSSARY = [
-  ['session', 'Session', 'One AI assistant with one job, like a team member: QA tests, Design draws screens, Builder writes code. Each one has its own chat window.'],
-  ['chief', 'Chief of Staff', 'The one session you talk to. It turns your requests into tasks, hands them to the right sessions, and comes back to you with questions and results.'],
-  ['flow', 'Flow', 'The steps every piece of work goes through, from your request to it being live. You draw it here; the tools then make sure it is followed.'],
-  ['lane', 'Lane', 'One path through the flow. Different kinds of work take different lanes: a risky change takes the HIGH lane with extra checks, an urgent fix takes the Hotfix lane.'],
-  ['stage', 'Stage', 'One step in a lane, done by one session. Example: "Design draws the screen" or "QA writes the tests".'],
-  ['piece', 'Piece of work', 'One task, like "add a footer to invoices". The Chief of Staff gives each piece a name (R14) and puts it on a lane.'],
-  ['dev', 'Dev branch', 'The shared place where finished, checked work is collected and tested together before it goes live. Think of it as the team\'s staging area.'],
-  ['live', 'Live', 'What your real users see. Nothing goes live without your word.'],
-  ['gate', 'Gate', 'A checkpoint. At the dev gate, code is only accepted if the right sessions have approved it. At the live gate, it also needs your word and a release record.'],
-  ['signoff', 'Sign-off', 'A session\'s written "I checked this exact version and it is OK". A session can only sign as itself, and only the tools can count sign-offs.'],
-  ['word', 'Your word', 'A short message from you that moves work forward: "approve" (a design), "go" (start risky work), "release" (put work live), "apply" (put an urgent fix live).'],
-  ['relay', 'Relay', 'When you say your word to the Chief of Staff instead of in the session that acts. It is passed on with your exact words and the question you answered. You can switch relays off per word.'],
-  ['condition', 'Condition', 'A rule that adds a check when certain files change. Example: "if login or payment files change, Security must also approve".'],
-  ['preset', 'Preset', 'A ready-made flow to start from: Full company, Small team, Solo or Custom. You can change anything afterwards.'],
-  ['company', 'Company defaults', 'Rules your company sets once for all its projects. A 🔒 locked rule is a minimum: a project can add checks but never remove that one.'],
-  ['source', 'Preferred source', 'A GitHub link to a plugin or skill you like for a session. It is tried first when that session\'s tools are installed. Links not from well-known publishers are safety-checked first.'],
-  ['plugin', 'Plugins and skills', 'Add-ons that give a session extra abilities, like understanding your programming language or testing in a browser. Each session gets only the ones its job needs.'],
-];
-const term = (id, text) => `<button class="term" data-act="term" data-id="${id}">${esc(text)}</button>`;
-const intro = (icon, what, example) => `<div class="intro"><span class="ic" aria-hidden="true">${icon}</span><div><p>${what}</p>${example ? `<div class="ex">${example}</div>` : ''}</div></div>`;
-let welcomeHidden = false;
-try { welcomeHidden = localStorage.getItem('flow-welcome-hidden') === '1'; } catch { /* storage may be blocked */ }
-function openHelp(hl) {
-  $('#drawerBody').innerHTML = `<p class="hint" style="margin:0">Every dotted-underlined word on the page opens its explanation here.</p><dl>${GLOSSARY.map(([id, t, d]) => `<div id="g-${id}"><dt ${id === hl ? 'data-hl' : ''}>${esc(t)}</dt><dd>${esc(d)}</dd></div>`).join('')}</dl>
-    <div class="note"><b>How the rules are enforced:</b> when a session tries to send code to the ${esc('dev branch')} or live, a check on your computer counts the sign-offs and records this flow asks for. If anything is missing, the code is refused and the session is told exactly what's missing.</div>`;
-  $('#drawer').hidden = false;
-  const el = hl && document.getElementById(`g-${hl}`); (el || $('#drawerClose')).scrollIntoView({ block: 'center' }); $('#drawerClose').focus();
-}
-
-async function api(path, body) {
+const api = async (path, body) => {
   const r = await fetch(path, { method: body ? 'POST' : 'GET', headers: { 'x-flow-token': TOKEN, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
-  const j = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
-  if (!r.ok) throw Object.assign(new Error(j.error || `HTTP ${r.status}`), { data: j });
-  return j;
-}
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), 5000); }
-
-// The layer being edited: the project's flow.json, or company.json "defaults" in company mode.
-function L() { if (!isCompany()) return S.project; S.company.defaults ||= {}; return S.company.defaults; }
-function laneEdit(id) {
-  const l = L(); l.lanes ||= [];
-  let x = l.lanes.find((y) => y.id === id && !y.removed);
-  const eff = S.flow.lanes.find((y) => y.id === id);
-  if (!x) { x = JSON.parse(JSON.stringify(eff)); l.lanes = l.lanes.filter((y) => y.id !== id); l.lanes.push(x); }
-  else if (!x.stages) Object.assign(x, { ...JSON.parse(JSON.stringify(eff)), ...x, stages: JSON.parse(JSON.stringify(eff.stages)) });
-  return x;
-}
-function roleEdit(id) { const l = L(); l.roles ||= {}; return (l.roles[id] ||= {}); }
-
-let checkTimer = null;
-function changed(now = false) {
-  dirty = true;
-  clearTimeout(checkTimer);
-  const run = async () => {
-    try { const st = await api('/api/check', isCompany() ? { company: S.company } : { project: S.project }); Object.assign(S, { flow: st.flow, findings: st.findings, board: st.board }); render(); }
-    catch (e) { toast(`Check failed: ${e.message}`); }
-  };
-  if (now) run(); else checkTimer = setTimeout(run, 250);
-}
-
-// ---------------- the Flow canvas ----------------
-// A lane is a list of stages; a stage with with_previous runs side by side with the one before it (one column).
-let zoom = 1, autoFit = true, simState = null, simPick = [], simOut = '', hist = [], fut = [], drag = null;
-const ini = (id) => { const w = rname(id).replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/).filter(Boolean); return (w.length > 1 ? w[0][0] + w[1][0] : (w[0] || id).slice(0, 2)).toUpperCase(); };
-function colsOf(l) {
-  const cols = [];
-  (l.stages || []).forEach((s, i) => {
-    const prev = cols[cols.length - 1];
-    if (s.with_previous && s.kind === 'stage' && prev && prev[prev.length - 1].s.kind === 'stage') prev.push({ s, i });
-    else cols.push([{ s, i }]);
-  });
-  return cols;
-}
-function viewLane() {
-  const eff = S.flow.lanes.find((x) => x.id === lane);
-  const own = (L().lanes || []).find((x) => x.id === lane && !x.removed && x.stages);
-  return own ? { ...eff, ...own } : eff;
-}
-function lockedFor(l) { const f = S.flow.floor || { signoffs: {} }; return isCompany() || !l ? [] : [...new Set([...(f.signoffs['*'] || []), ...(f.signoffs[l.id] || [])])]; }
-const layerJSON = () => JSON.stringify(isCompany() ? S.company : S.project);
-function snapshot() { hist.push(layerJSON()); if (hist.length > 80) hist.shift(); fut = []; simState = null; }
-function edit(fn, msg) { snapshot(); fn(laneEdit(lane)); changed(true); render(); if (msg) toast(msg); }
-function restore(json) { const v = JSON.parse(json); if (isCompany()) S.company = v; else S.project = v; stageSel = null; changed(true); render(); }
-function undo() { if (!hist.length) return; fut.push(layerJSON()); restore(hist.pop()); toast('Undone.'); }
-function redo() { if (!fut.length) return; hist.push(layerJSON()); restore(fut.pop()); }
-function removeAt(x, i) { const s = x.stages; if (s[i + 1] && s[i + 1].with_previous && !s[i].with_previous) s[i + 1].with_previous = false; s.splice(i, 1); }
-function moveToCol(x, i, c) {
-  const cols = colsOf(x), st = x.stages[i], target = c < cols.length ? cols[c][0].s : null;
-  if (target === st) return;
-  removeAt(x, i); st.with_previous = false;
-  x.stages.splice(target ? x.stages.indexOf(target) : x.stages.length, 0, st);
-}
-function groupWith(x, i, ti) {
-  const col = colsOf(x).find((c) => c.some((e) => e.i === ti)), last = col[col.length - 1].s, st = x.stages[i];
-  removeAt(x, i); st.with_previous = true;
-  x.stages.splice(x.stages.indexOf(last) + 1, 0, st);
-}
-function insertCol(x, c, st) { const cols = colsOf(x); st.with_previous = false; x.stages.splice(c < cols.length ? cols[c][0].i : x.stages.length, 0, st); }
-function newStage(kind, role) {
-  if (kind === 'word') return { kind: 'word', word: 'approve', title: "Owner's approval", produces: 'Words + date on the board' };
-  if (kind === 'gate') return { kind: 'gate', gate: 'dev', title: 'Push to dev' };
-  if (kind === 'live') return { kind: 'gate', gate: 'live', title: 'Push live' };
-  return { kind: 'stage', role, title: 'New step', produces: '' };
-}
-const colIndexOf = (l, i) => colsOf(l).findIndex((c) => c.some((e) => e.i === i));
-
-function face(r, extra, locked) {
-  return `<span class="face ${locked ? 'locked' : ''} ${extra ? 'extra' : ''}" style="--rc:var(--${grp(r)})" data-face="${esc(r)}" title="${esc(rname(r))}${locked ? ' (company minimum)' : ''}${extra ? ' (added by what the change touches)' : ''}" aria-label="${esc(rname(r))} must approve">${esc(ini(r))}</span>`;
-}
-function nodeHtml(s, i, l) {
-  const lit = simState ? (simState.lit.includes(i) ? ' lit' : ' dim') : '';
-  const cls = `node${stageSel === i ? ' sel' : ''}${lit}`;
-  if (s.kind === 'gate' && s.gate === 'dev') {
-    const locked = lockedFor(l), extra = simState ? simState.extra.filter((r) => !(l.dev_signoffs || []).includes(r)) : [];
-    const faces = l.live_exempt_signoffs ? '<span class="hint">exempt: live breakage only</span>'
-      : ((l.dev_signoffs || []).map((r) => face(r, false, locked.includes(r))).join('') + extra.map((r) => face(r, true)).join('')) || '<span class="hint">nobody yet</span>';
-    return `<div data-node="${i}" tabindex="0" class="${cls} gate" aria-label="Checkpoint before dev"><div class="who">🚧 Checkpoint</div><div class="t">${esc(s.title)}</div><div class="faces">${faces}</div><div class="facedrop">Drop a session here to require it</div><span class="handle" data-handle="${i}" title="Drag to link"></span></div>`;
-  }
-  if (s.kind === 'gate') return `<div data-node="${i}" tabindex="0" class="${cls} live" aria-label="Go live"><div class="who">🌐 Live</div><div class="t">${esc(s.title)}</div><div class="p">Needs "${esc(l.live_word || '?')}" + a release record</div><span class="handle" data-handle="${i}" title="Drag to link"></span></div>`;
-  if (s.kind === 'word') return `<div data-node="${i}" tabindex="0" class="${cls} word" aria-label="Your word: ${esc(s.word)}"><div class="who">🗣️ Your word</div><div class="t">${esc(s.title)}</div><div class="p">${esc(s.produces || 'Needed from you here')}</div><span class="handle" data-handle="${i}" title="Drag to link"></span></div>`;
-  return `<div data-node="${i}" tabindex="0" class="${cls}" style="--rc:var(--${grp(s.role)})" aria-label="${esc(rname(s.role))}: ${esc(s.title)}"><div class="who"><span class="dot"></span>${esc(rname(s.role))}</div><div class="t">${esc(s.title)}</div><div class="p">${esc(s.produces || '')}</div>${s.note ? `<div class="p" style="color:var(--warn)">${esc(s.note)}</div>` : ''}<span class="handle" data-handle="${i}" title="Drag to link"></span></div>`;
-}
-function sidePanel(l) {
-  if (!l) return '';
-  const s = stageSel !== null ? l.stages[stageSel] : null;
-  if (!s) {
-    return `<h3 class="sh">Lane: ${esc(l.name)}</h3>
-    <div class="field"><label for="ln-name">Lane name</label><input type="text" id="ln-name" data-act="ln" data-k="name" value="${esc(l.name)}"></div>
-    <div class="field"><label for="ln-when">Used when</label><input type="text" id="ln-when" data-act="ln" data-k="when" value="${esc(l.when || '')}"><div class="hint">Which kind of work takes this lane, in plain words. The Chief of Staff reads it.</div></div>
-    <div class="field"><label for="ln-before">Your word before building</label><select id="ln-before" data-act="ln" data-k="require_word"><option value="">Not needed</option><option value="approve" ${l.require_word === 'approve' ? 'selected' : ''}>approve: you approve the design or plan</option><option value="go" ${l.require_word === 'go' ? 'selected' : ''}>go: you say go before risky work</option></select><div class="hint">If set, code from this lane is refused until your word is on record.</div></div>
-    <div class="field"><label for="ln-word">Your word to go live</label><select id="ln-word" data-act="ln" data-k="live_word"><option value="">none</option>${Object.keys(S.flow.words).map((w) => `<option ${w === l.live_word ? 'selected' : ''}>${esc(w)}</option>`).join('')}</select></div>
-    <div class="hint">Lane id <code>${esc(l.id)}</code>. The Chief of Staff routes work here with <code>bootstrap piece R12 --lane ${esc(l.id)}</code>.</div>
-    <div><button class="btn small danger" data-act="dellane">Remove this lane</button></div>
-    <p class="hint">Click a step on the canvas to edit it.</p>`;
-  }
-  const head = s.kind === 'gate' ? (s.gate === 'dev' ? '🚧 Checkpoint' : '🌐 Go live') : s.kind === 'word' ? '🗣️ Your word' : 'Step';
-  let body = '';
-  if (s.kind === 'stage') body += `<div class="field"><label for="st-role">Who does it</label><select id="st-role" data-act="st" data-k="role">${Object.values(S.flow.roles).map((r) => `<option value="${esc(r.id)}" ${r.id === s.role ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></div>`;
-  if (s.kind === 'word') body += `<div class="field"><label for="st-word">Which word</label><select id="st-word" data-act="st" data-k="word">${[['approve', 'approve: you approve the design or plan'], ['go', 'go: you say go before risky work'], ['release', 'release: put it live'], ['apply', 'apply: put an urgent fix live']].map(([w, t]) => `<option value="${w}" ${w === s.word ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`;
-  if (s.kind === 'gate' && s.gate === 'dev') {
-    const locked = lockedFor(l);
-    body += `<p class="hint">Code joins dev only when everyone below has approved that exact version, with evidence.</p>
-    ${l.live_exempt_signoffs ? '<p class="hint">This lane is exempt (live breakage only).</p>' : `<div class="aplist">${(l.dev_signoffs || []).map((r) => `<div class="aprow">${face(r, false, locked.includes(r))}<span>${esc(rname(r))}</span>${locked.includes(r) ? '<span class="hint">🔒 company minimum</span>' : `<button class="btn small" data-act="aprm" data-r="${esc(r)}">Remove</button>`}</div>`).join('') || '<span class="hint">Nobody yet.</span>'}</div>
-    <div class="field"><label for="apadd">Add an approver</label><select id="apadd" data-act="apadd"><option value="">Choose…</option>${Object.values(S.flow.roles).filter((r) => !(l.dev_signoffs || []).includes(r.id)).map((r) => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></div>`}`;
-  }
-  body += `<div class="field"><label for="st-title">Title</label><input type="text" id="st-title" data-act="st" data-k="title" value="${esc(s.title)}"></div>`;
-  if (s.kind !== 'gate') body += `<div class="field"><label for="st-produces">What it produces</label><input type="text" id="st-produces" data-act="st" data-k="produces" value="${esc(s.produces || '')}"></div>`;
-  if (s.kind === 'stage') body += `<div class="field"><label for="st-note">Note</label><input type="text" id="st-note" data-act="st" data-k="note" value="${esc(s.note || '')}" placeholder="e.g. skip if no screen changed"></div>`;
-  if (s.kind === 'stage' && stageSel > 0 && l.stages[stageSel - 1].kind === 'stage') body += `<label class="row" style="gap:6px"><input type="checkbox" data-act="side" ${s.with_previous ? 'checked' : ''}> Runs side by side with the step before</label>`;
-  return `<h3 class="sh">${head}</h3>${body}
-    <div class="row"><button class="btn small" data-act="mv" data-d="-1">← Earlier</button><button class="btn small" data-act="mv" data-d="1">Later →</button><button class="btn small danger" data-act="delstage">Remove</button><button class="btn small" data-act="desel">Done</button></div>`;
-}
-function simPanel() {
-  return `<h3 class="sh">Try a change</h3><div class="sim"><span class="hint">Tick what a change touches. See its path, who must approve, and whether a push would get through.</span>
-  ${S.flow.conditions.map((c) => `<label><input type="checkbox" data-sim="${esc(c.id)}" ${simPick.includes(c.id) ? 'checked' : ''}> ${esc(c.label)}</label>`).join('')}
-  <label><input type="checkbox" data-sim="__docs" ${simPick.includes('__docs') ? 'checked' : ''}> Docs only</label>
-  <button class="btn primary" data-act="simrun">Show me</button><div id="simOut" aria-live="polite">${simOut}</div></div>`;
-}
-function canvasView() {
-  if (!lane || !S.flow.lanes.some((l) => l.id === lane)) lane = S.flow.lanes[0] && S.flow.lanes[0].id;
-  const l = lane && viewLane();
-  const pal = Object.values(S.flow.roles).map((r) => `<div class="pchip" data-role="${esc(r.id)}" tabindex="0" title="Drag onto the flow, or onto a checkpoint"><span class="face" style="--rc:var(--${grp(r.id)})">${esc(ini(r.id))}</span>${esc(r.name)}</div>`).join('');
-  let canvas = '<svg class="links" id="links"></svg>';
-  if (l) {
-    const cols = colsOf(l);
-    canvas += '<div class="gap" data-gap="0"></div>';
-    cols.forEach((col, c) => {
-      canvas += `<div class="col${col.length > 1 ? ' group' : ''}">${col.map((e) => nodeHtml(e.s, e.i, l)).join('')}${col.length > 1 ? '<div class="glabel">side by side</div>' : ''}</div>`;
-      canvas += `<div class="gap" data-gap="${c + 1}">${c < cols.length - 1 ? `<button class="plus" data-act="plus" data-c="${c + 1}" aria-label="Insert a step here">+</button>` : ''}</div>`;
-    });
-  }
-  return `<div class="flowgrid">
-  <aside class="palette" aria-label="Drag onto the flow"><div class="ph">Sessions</div>${pal}<div class="ph">Steps</div>
-    <div class="pchip block" data-new="word" tabindex="0">🗣️ Your word</div><div class="pchip block" data-new="gate" tabindex="0">🚧 Checkpoint</div><div class="pchip block" data-new="live" tabindex="0">🌐 Go live</div>
-    <div class="trash" id="trash">🗑 Drop here to remove</div></aside>
-  <section class="cmain">
-    <div class="row" style="justify-content:space-between"><div class="row" role="group" aria-label="Lanes">${S.flow.lanes.map((x) => `<button class="chip" aria-pressed="${x.id === lane}" data-act="lane" data-id="${esc(x.id)}">${esc(x.name)}</button>`).join('')}<button class="chip add" data-act="addlane">+ Lane</button></div>
-      <div class="zoom"><button class="btn small" data-act="zout" aria-label="Zoom out">−</button><span id="zval">${Math.round(zoom * 100)}%</span><button class="btn small" data-act="zin" aria-label="Zoom in">+</button><button class="btn small" data-act="zfit">Fit</button></div></div>
-    <div class="hintbar">Drag a session onto a <b>line</b> to add a step · drop it <b>on a step</b> to run side by side · drag a step's <b>● dot</b> to another step to link them · drag a session onto a ${term('gate', 'checkpoint')} to require its ${term('signoff', 'sign-off')}.</div>
-    <div class="canvaswrap" id="wrap"><div class="canvas" id="canvas" style="zoom:${zoom}">${canvas}</div></div>
-    <div class="legend"><span><span class="dot" style="--rc:var(--r-docs)"></span>writes, researches, designs</span><span><span class="dot" style="--rc:var(--r-core)"></span>builds</span><span><span class="dot" style="--rc:var(--r-review)"></span>checks and reviews</span><span><span class="dot" style="--rc:var(--r-ops)"></span>releases</span><span>🔒 company minimum</span><span>Keyboard: Tab to a step, ← → to move, Delete to remove</span></div>
-  </section>
-  <section class="side" aria-label="Details">${sidePanel(l)}${simPanel()}</section></div>`;
-}
-function applyZoom() { const c = $('#canvas'); if (!c) return; c.style.zoom = zoom; const z = $('#zval'); if (z) z.textContent = Math.round(zoom * 100) + '%'; drawLinks(); }
-function fitZoom() { const c = $('#canvas'), w = $('#wrap'); if (!c || !w) return; c.style.zoom = 1; zoom = Math.max(0.7, Math.min(1, (w.clientWidth - 40) / c.scrollWidth)); }
-function drawLinks(temp) {
-  const svg = $('#links'), c = $('#canvas'), l = lane && viewLane(); if (!svg || !c || !l) return;
-  const base = c.getBoundingClientRect(), k = zoom;
-  const ns = colsOf(l).map((col) => col.map((e) => c.querySelector(`[data-node="${e.i}"]`)));
-  let d = '';
-  for (let i = 0; i < ns.length - 1; i++) for (const a of ns[i]) for (const b of ns[i + 1]) {
-    if (!a || !b) continue;
-    const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
-    const x1 = (ra.right - base.left) / k, y1 = (ra.top + ra.height / 2 - base.top) / k, x2 = (rb.left - base.left) / k, y2 = (rb.top + rb.height / 2 - base.top) / k;
-    const hot = simState && simState.lit.includes(+a.dataset.node) && simState.lit.includes(+b.dataset.node);
-    d += `<path class="${hot ? 'hot' : ''}" d="M${x1},${y1} C${x1 + 26},${y1} ${x2 - 26},${y2} ${x2},${y2}"/>`;
-  }
-  if (temp) d += `<path class="temp" d="M${temp[0]},${temp[1]} L${temp[2]},${temp[3]}"/>`;
-  svg.innerHTML = d; svg.setAttribute('width', c.scrollWidth); svg.setAttribute('height', c.scrollHeight);
-}
-async function runSim() {
-  const docs = simPick.includes('__docs'), condIds = simPick.filter((x) => x !== '__docs');
-  let r;
-  try { r = await api('/api/simulate', { ...(isCompany() ? { company: S.company } : { project: S.project }), condIds, docsOnly: docs && !condIds.length }); }
-  catch (e) { return toast(`Could not simulate: ${e.message}`); }
-  if (r.docsOnly) { simState = null; simOut = '<div class="result ok">Docs-only changes skip the checkpoint and are accepted at once.</div>'; return render(); }
-  const laneName = (S.flow.lanes.find((x) => x.id === r.lane) || {}).name || r.lane;
-  if (r.lane !== lane) { lane = r.lane; stageSel = null; toast(`This change goes down the ${laneName} lane.`); }
-  simState = { lit: [], extra: r.added };
-  simOut = `<div class="result wait"><b>${esc(laneName)} lane.</b> Before it can join dev: approval from <b>${esc(r.required.map(rname).join(', ') || 'nobody')}</b>${r.added.length ? ' (the dashed faces were added by what it touches)' : ''}.<br>Your words: <b>${esc(r.words.join(', ') || 'none')}</b>.<br>If anything is missing when a session pushes, the push is refused and the reason is shown.</div>`;
-  render();
-  const cols = colsOf(viewLane()); let k = 0;
-  const step = () => { if (!simState || k >= cols.length) return; simState.lit.push(...cols[k++].map((e) => e.i)); render(); setTimeout(step, 240); };
-  step();
-}
-
-// pointer-based drag: works with a mouse, a pen and touch
-function startDrag(e, info) { drag = { ...info, x0: e.clientX, y0: e.clientY, started: false, ghost: null, over: null }; window.addEventListener('pointermove', onDragMove); window.addEventListener('pointerup', onDragUp, { once: true }); }
-function dropTarget(x, y) {
-  const el = document.elementFromPoint(x, y); if (!el) return null;
-  if (el.closest('#trash')) return { type: 'trash', el: $('#trash') };
-  const n = el.closest('[data-node]'); if (n) return { type: 'node', i: +n.dataset.node, el: n };
-  const g = el.closest('[data-gap]'); if (g) return { type: 'gap', c: +g.dataset.gap, el: g };
-  return null;
-}
-function onDragMove(e) {
-  if (!drag) return;
-  if (!drag.started && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
-  if (!drag.started) {
-    drag.started = true;
-    if (drag.type !== 'link') { drag.ghost = drag.src.cloneNode(true); drag.ghost.classList.add('ghost'); drag.ghost.style.width = drag.src.offsetWidth + 'px'; document.body.appendChild(drag.ghost); }
-    if (drag.type === 'move') drag.src.classList.add('dragging');
-  }
-  if (drag.ghost) { drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px'; }
-  document.querySelectorAll('.over').forEach((x) => x.classList.remove('over'));
-  drag.over = dropTarget(e.clientX, e.clientY);
-  if (drag.over && drag.over.el) drag.over.el.classList.add('over');
-  if (drag.type === 'link') { const b = $('#canvas').getBoundingClientRect(), h = drag.src.getBoundingClientRect(); drawLinks([(h.left + h.width / 2 - b.left) / zoom, (h.top + h.height / 2 - b.top) / zoom, (e.clientX - b.left) / zoom, (e.clientY - b.top) / zoom]); }
-  const w = $('#wrap'); if (w) { const r = w.getBoundingClientRect(); if (e.clientX > r.right - 40) w.scrollLeft += 12; else if (e.clientX < r.left + 40) w.scrollLeft -= 12; }
-}
-function onDragUp() {
-  window.removeEventListener('pointermove', onDragMove);
-  const d = drag; drag = null;
-  document.querySelectorAll('.over,.dragging').forEach((x) => x.classList.remove('over', 'dragging'));
-  if (d.ghost) d.ghost.remove();
-  if (!d.started) { if (d.type === 'move') { stageSel = d.i; render(); } return; }
-  const t = d.over, l = viewLane();
-  if (d.type === 'link') {
-    if (t && t.type === 'node' && t.i !== d.i) {
-      const cf = colIndexOf(l, d.i), ct = colIndexOf(l, t.i);
-      if (cf === ct) { drawLinks(); return toast('Those two already run side by side.'); }
-      const a = l.stages[d.i].title, b = l.stages[t.i].title;
-      return edit((x) => moveToCol(x, t.i, cf + 1), `Linked: "${a}" → "${b}"`);
-    }
-    return drawLinks();
-  }
-  if (d.type === 'face') {
-    if (t && t.type === 'node' && t.i === d.gate) return;
-    if (lockedFor(l).includes(d.role)) { const g = document.querySelector(`[data-node="${d.gate}"]`); if (g) g.classList.add('shake'); return toast(`${rname(d.role)} is a company minimum (🔒) and can't be removed here.`); }
-    return edit((x) => { x.dev_signoffs = (x.dev_signoffs || []).filter((r) => r !== d.role); }, `${rname(d.role)} no longer has to approve here.`);
-  }
-  if (!t) return;
-  if (t.type === 'trash') { if (d.type === 'move') edit((x) => { removeAt(x, d.i); stageSel = null; }, 'Step removed. Undo with Ctrl+Z.'); return; }
-  if (t.type === 'node') {
-    const target = l.stages[t.i];
-    if (target.kind === 'gate' && target.gate === 'dev' && d.role) {
-      if (l.live_exempt_signoffs) return toast('This lane is exempt from sign-offs.');
-      if ((l.dev_signoffs || []).includes(d.role)) return toast(`${rname(d.role)} already approves here.`);
-      return edit((x) => { x.dev_signoffs = [...new Set([...(x.dev_signoffs || []), d.role])]; }, `${rname(d.role)} must now approve at this checkpoint.`);
-    }
-    const isStage = d.type === 'new' ? !d.newKind : l.stages[d.i].kind === 'stage';
-    if (target.kind === 'stage' && isStage) {
-      if (d.type === 'move') { if (colIndexOf(l, d.i) === colIndexOf(l, t.i)) return; return edit((x) => groupWith(x, d.i, t.i), 'Now running side by side.'); }
-      return edit((x) => { const col = colsOf(x).find((c) => c.some((e) => e.i === t.i)); const last = col[col.length - 1].s; const st = newStage('stage', d.role); st.with_previous = true; x.stages.splice(x.stages.indexOf(last) + 1, 0, st); stageSel = x.stages.indexOf(st); }, 'Now running side by side. Describe the new step on the right.');
-    }
-    return toast(target.kind === 'gate' && target.gate === 'dev' ? 'Drop a session on a checkpoint to require its sign-off.' : 'Drop on a line to insert, or on a session step to run side by side.');
-  }
-  if (t.type === 'gap') {
-    if (d.type === 'new') return edit((x) => { const st = newStage(d.newKind || 'stage', d.role); insertCol(x, t.c, st); stageSel = x.stages.indexOf(st); }, 'Step added. Describe it on the right.');
-    if (d.type === 'move') return edit((x) => { const st = x.stages[d.i]; moveToCol(x, d.i, t.c); stageSel = x.stages.indexOf(st); }, 'Moved.');
-  }
-}
-document.addEventListener('pointerdown', (e) => {
-  if (!S || tab !== 'flow' || e.button > 0) return;
-  const h = e.target.closest('[data-handle]'); if (h) { e.preventDefault(); return startDrag(e, { type: 'link', i: +h.dataset.handle, src: h }); }
-  const f = e.target.closest('.node [data-face]'); if (f) { e.preventDefault(); return startDrag(e, { type: 'face', role: f.dataset.face, gate: +f.closest('[data-node]').dataset.node, src: f }); }
-  const c = e.target.closest('.palette .pchip'); if (c) { e.preventDefault(); return startDrag(e, { type: 'new', role: c.dataset.role, newKind: c.dataset.new, src: c }); }
-  const n = e.target.closest('[data-node]'); if (n) { e.preventDefault(); n.focus(); return startDrag(e, { type: 'move', i: +n.dataset.node, src: n }); }
-});
-document.addEventListener('keydown', (e) => {
-  if (!S || /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); return e.shiftKey ? redo() : undo(); }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); return redo(); }
-  const n = document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-node]');
-  if (!n || tab !== 'flow') return;
-  const i = +n.dataset.node, l = viewLane(), c = colIndexOf(l, i);
-  const refocus = (st) => { const idx = viewLane().stages.indexOf(st); const el = document.querySelector(`[data-node="${idx}"]`); if (el) el.focus(); };
-  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-    const g = e.key === 'ArrowRight' ? c + 2 : c - 1; if (g < 0 || g > colsOf(l).length) return;
-    e.preventDefault(); let moved; edit((x) => { moved = x.stages[i]; moveToCol(x, i, g); stageSel = x.stages.indexOf(moved); }); refocus(moved);
-  }
-  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); edit((x) => { removeAt(x, i); stageSel = null; }, 'Step removed. Undo with Ctrl+Z.'); }
-  if (e.key === 'Enter') { stageSel = i; render(); }
-});
-
-// first-run wizard: three plain questions, then a starting flow
-const WZ = [
-  ['What are you building?', [['prototype', 'A prototype or side project', 'Lightest setup: one assistant plays the roles'], ['small', 'A small product', 'A smaller team, still with reviews'], ['live', 'A live product with real users', 'The full team and every check (recommended if money or customer data is involved)']], 2],
-  ['Should risky changes wait for your "go"?', [['yes', 'Yes', 'Login, payment and database changes pause until you say go'], ['no', 'No', 'Reviews only']], 0],
-  ['Does your company have shared rules?', [['no', 'Not yet', 'You can add them later'], ['yes', 'Yes, in a repo or folder', "You'll point to them on the Company tab"]], 0],
-];
-let wz = 0, wzAns = [];
-function openWizard() { wz = 0; wzAns = []; showWz(); $('#wizard').hidden = false; $('#wzNext').focus(); }
-function showWz() {
-  const [q, opts, def] = WZ[wz];
-  $('#wzStep').textContent = `Question ${wz + 1} of ${WZ.length}`;
-  $('#wzTitle').textContent = q;
-  $('#wzOpts').innerHTML = opts.map(([v, t, s], i) => `<label class="opt"><input type="radio" name="wz" value="${v}" ${i === def ? 'checked' : ''}><span><b>${esc(t)}</b><small>${esc(s)}</small></span></label>`).join('');
-  $('#wzNext').textContent = wz === WZ.length - 1 ? 'Build my flow' : 'Next';
-}
-function finishWizard() {
-  snapshot();
-  const p = S.project, size = wzAns[0];
-  p.preset = { prototype: 'solo', small: 'small', live: 'full' }[size]; p.size = size;
-  delete p.lanes;
-  if (wzAns[1] === 'no') p.lanes = [{ id: 'high', require_word: '' }];
-  try { localStorage.setItem('flow-wizard-done', '1'); } catch { /* fine */ }
-  $('#wizard').hidden = true;
-  tab = wzAns[2] === 'yes' ? 'company' : 'flow'; lane = null; stageSel = null; autoFit = true;
-  changed(true);
-  toast(`Starting with the "${S.presets[p.preset].label}" flow. Drag things around to make it yours, then Save.`);
-}
-function wizardNeeded() {
-  if (isCompany()) return false;
-  try { if (localStorage.getItem('flow-wizard-done') === '1') return false; } catch { /* fall through */ }
-  const p = S.project || {};
-  return !p.lanes && !p.roles && !p.conditions && !p.extends;
-}
-
-// ---------------- views ----------------
-const VIEWS = {
-  flow() { return canvasView(); },
-  sessions() {
-    if (!S.flow.roles[roleSel]) roleSel = Object.keys(S.flow.roles)[0];
-    const r = S.flow.roles[roleSel];
-    const own = ((L().roles || {})[roleSel] || {}).sources;
-    const srcText = (Array.isArray(own) ? own : (r.sources || [])).join('\n');
-    const list = (r.source_list || []).map((s) => `<div class="src"><div class="row" style="gap:6px"><span class="badge ${s.from === 'company' ? 'b-mute' : !s.ok ? 'b-bad' : s.official ? 'b-ok' : 'b-warn'}">${s.from === 'company' ? (s.required ? '🔒 Company, required' : 'Company default') : s.ok ? (s.official ? 'Official' : 'Trust check') : s.blocked ? '⛔ Blocked' : 'Invalid'}</span><span class="badge b-mute">${esc(s.kind)}</span></div><code>${esc(s.ok ? s.slug : s.line)}</code><div class="why">${esc(s.why || '')}</div></div>`).join('');
-    const kits = (k) => (r[k] || []).map((x) => `<span class="kit">${esc(x)}<button data-act="kitdel" data-k="${k}" data-v="${esc(x)}" aria-label="Remove ${esc(x)}">✕</button></span>`).join('') || '<span class="empty">none</span>';
-    return `<h2>Team</h2>
-    ${intro('👥', `Your AI team. Each ${term('session', 'session')} has one job, things it must never do, and its own ${term('plugin', 'plugins and skills')}. Pick one on the left to see or change it, or add your own (for example a "Data Engineer").`,
-      `You can paste GitHub links to tools you like for a session under ${term('source', 'Preferred sources')}. They're tried first when the session is set up.`)}
-    <div class="split"><div class="panel rolelist" role="listbox" aria-label="Sessions">${Object.values(S.flow.roles).map((x) => `<button class="r" role="option" aria-selected="${x.id === roleSel}" data-act="role" data-id="${esc(x.id)}"><span class="dot" style="--rc:var(--${grp(x.id)})"></span>${esc(x.name)}<span class="cls">${esc(x.class || '')}</span></button>`).join('')}
-      <div style="margin-top:10px"><label for="newRole" class="hint" style="display:block">Add a session (short id, e.g. data-engineer)</label><div class="row"><input type="text" id="newRole" placeholder="data-engineer" style="width:140px"><button class="btn small" data-act="addrole">+ Add</button></div></div></div>
-    <div class="panel"><div class="form">
-      <label for="f-name">Display name</label><div><input type="text" id="f-name" data-act="rf" data-k="name" value="${esc(r.name)}" style="width:100%"><div class="hint">What you'll see in the session list and chat titles. Change it freely.</div></div>
-      <label>Role id</label><div><code>${esc(r.id)}</code><div class="hint">Fixed. It names this session's log and sign-off files, so it never changes.</div></div>
-      <label for="f-job">Job</label><div><textarea id="f-job" data-act="rf" data-k="job" rows="3" style="font-family:var(--text)">${esc(r.job)}</textarea><div class="hint">What this session is for, in a sentence or two. It's sent to the session when it starts.</div></div>
-      <label for="f-never">Never</label><div><textarea id="f-never" data-act="rf" data-k="never" rows="2" style="font-family:var(--text)">${esc(r.never)}</textarea><div class="hint">Things it must never do. The most important ones (writing code, going live, signing for others) are blocked by the tools, not just written here.</div></div>
-      <label for="f-model">Model class</label><div><select id="f-model" data-act="rf" data-k="model">${['strongest', 'strong', 'mid', 'mid or strong', 'cheap', 'cheapest'].map((m) => `<option ${m === r.model ? 'selected' : ''}>${m}</option>`).join('')}</select><div class="hint">Stronger models think better but cost more. Use them for deciding and reviewing; cheaper ones are fine for note-keeping.</div></div>
-      <label>Skills</label><div><div class="kits">${kits('skills')}<input type="text" id="add-skills" placeholder="skill name" aria-label="Skill to add" style="width:140px"><button class="btn small" data-act="kitadd" data-k="skills">+ skill</button></div><div class="hint">Know-how the session can follow, like "test-driven-development".</div></div>
-      <label>Plugins</label><div><div class="kits">${kits('plugins')}<input type="text" id="add-plugins" placeholder="plugin or *-lsp" aria-label="Plugin to add" style="width:140px"><button class="btn small" data-act="kitadd" data-k="plugins">+ plugin</button></div><div class="hint">Tools it may use. <code>*-lsp</code> means "the code-understanding plugin for whatever language the project uses".</div></div>
-      <label for="f-src">Preferred sources</label>
-      <div><textarea id="f-src" data-act="src" rows="4" placeholder="One per line:&#10;https://github.com/owner/repo&#10;owner/repo&#10;https://github.com/owner/repo/tree/main/skills/name">${esc(srcText)}</textarea>
-        <div class="hint">Paste one GitHub link per line: a whole repo, or a link to one skill folder inside it. Each link is checked as you type. "Official" ones come from well-known publishers. "Trust check" ones are safety-checked before install. "Blocked" ones are never installed.</div>
-        <div style="margin-top:8px">${list || '<div class="empty">No preferred sources. Bootstrap searches the marketplaces and GitHub on its own.</div>'}</div></div>
-      ${r.class === 'custom' ? '<div class="full"><button class="btn small danger" data-act="delrole">Remove this session</button></div>' : ''}
-    </div></div></div>`;
-  },
-  gates() {
-    const floor = S.flow.floor || { signoffs: {}, no_relay: [] };
-    const signers = [...new Set(['qa', 'design', 'tech-lead', 'security', 'librarian', 'chief-of-staff', ...S.flow.lanes.flatMap((l) => l.dev_signoffs || [])])].filter((r) => S.flow.roles[r]);
-    const own = (id) => ((L().lanes || []).find((x) => x.id === id) || null);
-    const cell = (l, r) => {
-      if (l.live_exempt_signoffs) return '<span class="s-na">—</span>';
-      const locked = (floor.signoffs['*'] || []).includes(r) || (floor.signoffs[l.id] || []).includes(r);
-      const mine = own(l.id);
-      if (locked && !isCompany()) {
-        const dropped = mine && mine.dev_signoffs && !mine.dev_signoffs.includes(r);
-        return dropped ? `<button class="badge b-bad" data-act="gate" data-l="${esc(l.id)}" data-r="${esc(r)}" title="Required by company defaults: click to restore">🔒 required</button>` : '<span class="badge b-mute" title="Required by company defaults">🔒 ✓</span>';
-      }
-      return `<input type="checkbox" data-act="gate" data-l="${esc(l.id)}" data-r="${esc(r)}" ${(l.dev_signoffs || []).includes(r) ? 'checked' : ''} aria-label="${esc(rname(r))} signs ${esc(l.name)}">`;
-    };
-    return `<h2>Gates &amp; words</h2>
-    ${intro('✅', `Who must check code before it joins the ${term('dev', 'dev branch')}. Tick a box and that session's ${term('signoff', 'sign-off')} becomes required for that lane. Code without every required sign-off is refused automatically.`,
-      'Example: ticking Security for Normal means every normal change needs Security to approve it, not just risky ones.')}
-    <div class="tbl"><table><caption class="hint" style="text-align:left;padding:8px 10px;caption-side:top">Rows are lanes, columns are sessions. ✓ = must approve.</caption><tr><th>Lane · push to dev</th>${signers.map((r) => `<th class="c">${esc(rname(r))}</th>`).join('')}</tr>
-    ${S.flow.lanes.map((l) => `<tr><td><b>${esc(l.name)}</b>${l.live_exempt_signoffs ? ' <span class="empty">exempt (live breakage)</span>' : ''}</td>${signers.map((r) => `<td class="c">${cell(l, r)}</td>`).join('')}</tr>`).join('')}</table></div>
-    ${S.flow.company ? `<p class="empty" style="margin:6px 0 0">🔒 = set by ${esc(S.flow.company.name)} defaults. A project can add sign-offs but can't remove these.</p>` : ''}
-    <h3>${term('condition', 'Extra checks')} when certain files change</h3>
-    <p class="hint" style="margin:-4px 0 8px">These apply in every lane, on top of the ticks above. The tools look at which files a piece of work changed.</p>
-    <div class="panel">${S.flow.conditions.map((c, i) => `<div class="form" style="padding:10px 0;border-top:${i ? '1px solid var(--line)' : '0'}">
-      <label for="c-l-${i}">If the work…</label><div><input type="text" id="c-l-${i}" data-act="cond" data-i="${i}" data-k="label" value="${esc(c.label)}" style="width:100%"><div class="hint">A plain description, e.g. "Touches payments".</div></div>
-      <label for="c-g-${i}">Files</label><div><input type="text" id="c-g-${i}" data-act="cond" data-i="${i}" data-k="globs" value="${esc((c.globs || []).join(', '))}" style="width:100%"><div class="hint">File patterns, comma-separated. <code>**</code> means "any folders", <code>*</code> means "any name": <code>**/payments/**</code> is every file in any payments folder.</div></div>
-      <label for="c-r-${i}">…then also</label><div><div class="row"><select id="c-r-${i}" data-act="cond" data-i="${i}" data-k="require" aria-label="Session that must also approve">${Object.values(S.flow.roles).map((r) => `<option value="${esc(r.id)}" ${(c.require || [])[0] === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select><span>must approve</span></div>
-        <label class="row" style="margin-top:6px;gap:6px"><input type="checkbox" data-act="condword" data-i="${i}" ${c.require_word === 'approve' ? 'checked' : ''}> and you must approve the design first (your "approve" on record, with a link to the design)</label>
-        <div class="row" style="margin-top:6px"><button class="btn small danger" data-act="delcond" data-i="${i}">Remove this check</button></div></div>
-    </div>`).join('')}<button class="chip add" style="margin-top:8px" data-act="addcond">+ Add a check</button></div>
-    <h3>${term('word', 'Your words')}</h3>
-    <p class="hint" style="margin:-4px 0 8px">Short answers from you that move work forward. "${term('relay', 'Relay allowed')}" means you can say it to the Chief of Staff, who passes it on with your exact words. Untick to require you to type it in the session that acts.</p>
-    <div class="tbl"><table><tr><th>Word</th><th>Meaning</th><th class="c">Relay allowed</th><th>A relay must carry</th></tr>
-    ${Object.entries(S.flow.words).map(([w, v]) => `<tr><td><b>${esc(w)}</b></td><td>${esc(v.label || '')}</td><td class="c">${(floor.no_relay || []).includes(w) && !isCompany() ? '<span class="badge b-mute">🔒 off</span>' : `<input type="checkbox" data-act="relay" data-w="${esc(w)}" ${v.relay ? 'checked' : ''} aria-label="Relay of ${esc(w)} allowed">`}</td><td>exact words + the question asked + date${['release', 'apply'].includes(w) ? ', shas, pasted check, sign-offs' : ''}</td></tr>`).join('')}</table></div>`;
-  },
-  check() {
-    const lvl = { error: 'b-bad', warning: 'b-warn', info: 'b-mute', ok: 'b-ok' };
-    const say = { error: 'Must fix', warning: 'Worth fixing', info: 'Good to know', ok: 'Looks good' };
-    const order = { error: 0, warning: 1, info: 2, ok: 3 };
-    const f = [...S.findings].sort((a, b) => order[a.level] - order[b.level]);
-    return `<h2>Check</h2>
-    ${intro('🔎', 'Your flow is checked every time you change something, for gaps like "nobody reviews the code" or "a lane goes live without your word". <b>Must fix</b> items block saving. <b>Worth fixing</b> items let you save, but read them.', 'Each item has a "Go to" button that takes you to the place to fix it.')}
-    <div class="panel">${f.map((x) => `<div class="find"><span class="badge ${lvl[x.level]}">${esc(say[x.level] || x.level)}</span><div>${esc(x.msg)}${x.fix ? `<div class="fix">Fix: ${esc(x.fix)}</div>` : ''}</div>${x.where ? `<button class="btn small" data-act="goto" data-where="${esc(x.where)}">Go to</button>` : '<span></span>'}</div>`).join('') || '<div class="empty">Nothing to report.</div>'}</div>`;
-  },
-  board() {
-    if (isCompany()) return '<h2>Board</h2><p class="lead">The board belongs to a project. Open the editor inside a project to see it.</p>';
-    const cols = [...new Set(S.board.flatMap((p) => [...p.required, ...Object.keys(p.signed)]))];
-    const s = (p, r) => p.signed[r] ? '<span class="sig s-ok" title="signed">✓</span>' : p.required.includes(r) ? '<span class="sig s-no" title="missing">·</span>' : '<span class="sig s-na">—</span>';
-    return `<h2>Board</h2>
-    ${intro('📋', `Every ${term('piece', 'piece of work')} in progress, and who has approved it so far. <span class="sig s-ok">✓</span> approved · <span class="sig s-no">·</span> still waiting · — not needed.`, 'Extra checks that depend on which files changed (Security, Design…) and your recorded words are added when the code is sent. If something is missing then, the session is told exactly what.')}
-    ${S.board.length ? `<div class="tbl"><table><tr><th>Piece</th><th>Lane</th>${cols.map((c) => `<th class="c">${esc(rname(c))}</th>`).join('')}<th>Can push?</th></tr>
-    ${S.board.map((p) => `<tr><td><b>${esc(p.piece)}</b> ${esc(p.title)}</td><td>${esc((S.flow.lanes.find((l) => l.id === p.lane) || {}).name || p.lane)}</td>${cols.map((c) => `<td class="c">${s(p, c)}</td>`).join('')}<td>${p.missing.length ? `<span class="badge b-warn">waiting: ${esc(p.missing.map(rname).join(', '))}</span>` : '<span class="badge b-ok">gate met</span>'}</td></tr>`).join('')}</table></div>`
-      : '<div class="panel empty">No pieces yet. They appear when sessions run <code>bootstrap piece</code> and <code>bootstrap signoff</code>.</div>'}`;
-  },
-  presets() {
-    const cur = L().preset || S.flow.preset;
-    return `<h2>Presets</h2>
-    ${intro('🧭', `A ${term('preset', 'preset')} is a ready-made flow. <b>Not sure? Choose "Full company"</b>: it's the safest starting point, and you can relax things later.`, "Switching presets replaces your lane changes (you're asked first). Your sessions' tools and preferred sources are kept.")}
-    <div class="grid2">${Object.entries(S.presets).map(([k, p]) => `<button class="preset" aria-pressed="${k === cur}" data-act="preset" data-id="${esc(k)}"><b>${esc(p.label)}</b><span>${esc(p.about)}</span></button>`).join('')}</div>`;
-  },
-  company() {
-    if (isCompany()) return companyEditor();
-    const c = S.flow.company, floor = S.flow.floor;
-    return `<h2>Company defaults</h2>
-    ${intro('🏢', `Rules your company sets once for all its projects (${term('company', 'company defaults')}). A project can change a default, but a 🔒 locked rule is a minimum: a project can add checks, never remove that one.`, 'Most people leave this empty to begin with. Fill in "Defaults live in" only if your company keeps shared rules in a GitHub repo or folder.')}
-    <div class="panel"><div class="form">
-      <label for="ext">Defaults live in</label><div><input type="text" id="ext" data-act="ext" style="width:100%" value="${esc(S.project.extends || '')}" placeholder="github:acme/agent-defaults@<sha>   or   ../agent-defaults/company.json">
-      <div class="empty" style="margin-top:4px">A company GitHub repo pinned to a commit (a reviewed copy is kept in <code>.bootstrap/company.json</code>), or a local file. Leave empty for none.</div>
-      <div class="row" style="margin-top:6px"><button class="btn small" data-act="updates">Check for updates</button><span id="upd"></span></div></div>
-      <label>Inherited from</label><div style="padding-top:6px">${c ? `<b>${esc(c.name)}</b> ${c.sha ? `@ <code>${esc(c.sha)}</code>` : ''}` : '<span class="empty">nothing yet</span>'}</div>
-    </div></div>
-    ${c ? `<h3>Locked minimum sign-offs</h3><div class="panel">${Object.entries(floor.signoffs).map(([k, v]) => `<div>${k === '*' ? 'Every code lane' : `Lane <b>${esc(k)}</b>`}: ${v.map((r) => `<span class="kit">🔒 ${esc(rname(r))}</span>`).join(' ')}</div>`).join('') || '<span class="empty">none</span>'}
-      ${floor.no_relay.length ? `<div style="margin-top:6px">Relays forbidden for: ${floor.no_relay.map((w) => `<b>${esc(w)}</b>`).join(', ')}</div>` : ''}</div>
-      <h3>Blocked sources</h3><div class="panel kits">${(S.flow.blocked_sources || []).map((b) => `<span class="kit">⛔ ${esc(b)}</span>`).join('') || '<span class="empty">none</span>'}</div>` : ''}
-    <div class="note" style="margin-top:14px">To edit the company defaults themselves, run <code>bootstrap flow --company &lt;folder&gt;</code> in your company defaults repo, then commit and push it.</div>`;
-  },
+  const j = await r.json(); if (!r.ok) throw Object.assign(new Error(j.error || r.status), j); return j;
 };
-function companyEditor() {
-  const C = S.company; C.floor ||= {}; C.floor.signoffs ||= {}; C.floor.no_relay ||= []; C.sources ||= {}; C.defaults ||= {}; C.defaults.blocked_sources ||= [];
-  const star = C.floor.signoffs['*'] || [];
-  const roles = Object.values(S.flow.roles);
-  return `<h2>Company defaults</h2><p class="lead">You're editing <code>company.json</code> for every project that inherits it. Lanes, sessions and conditions you change in the other tabs become company <b>defaults</b>. What you lock here is a <b>floor</b> no project can loosen.</p>
-  <div class="panel"><div class="form"><label for="cname">Company</label><input type="text" id="cname" data-act="cname" value="${esc(C.name || '')}">
-    <label for="cpreset">Default preset</label><select id="cpreset" data-act="cpreset">${Object.entries(S.presets).map(([k, p]) => `<option value="${k}" ${k === (C.defaults.preset || 'full') ? 'selected' : ''}>${esc(p.label)}</option>`).join('')}</select></div></div>
-  <h3>🔒 Must sign every code push (all lanes except exempt ones)</h3>
-  <div class="panel kits">${roles.map((r) => `<label class="kit" style="padding:4px 8px"><input type="checkbox" data-act="floor" data-r="${esc(r.id)}" ${star.includes(r.id) ? 'checked' : ''}> ${esc(r.name)}</label>`).join('')}</div>
-  <h3>🔒 Relays forbidden for</h3>
-  <div class="panel kits">${Object.keys(S.flow.words).map((w) => `<label class="kit" style="padding:4px 8px"><input type="checkbox" data-act="norelay" data-w="${esc(w)}" ${C.floor.no_relay.includes(w) ? 'checked' : ''}> ${esc(w)}</label>`).join('')}</div>
-  <h3>Approved sources per session</h3>
-  <div class="tbl"><table><tr><th>Session</th><th>Repo</th><th class="c">Required</th><th></th></tr>
-  ${Object.entries(C.sources).flatMap(([role, list]) => list.map((x, i) => `<tr><td>${esc(rname(role))}</td><td><code>${esc(x.repo)}</code></td><td class="c"><input type="checkbox" data-act="csrcreq" data-r="${esc(role)}" data-i="${i}" ${x.required ? 'checked' : ''} aria-label="required"></td><td><button class="btn small danger" data-act="csrcdel" data-r="${esc(role)}" data-i="${i}">Remove</button></td></tr>`)).join('') || '<tr><td colspan="4" class="empty">none</td></tr>'}</table></div>
-  <div class="row" style="margin-top:8px"><select id="csrc-role">${roles.map((r) => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select><input type="text" id="csrc-repo" placeholder="owner/repo or GitHub link"><button class="btn small" data-act="csrcadd">+ Add</button></div>
-  <h3>Blocked sources</h3>
-  <div class="panel kits">${C.defaults.blocked_sources.map((b) => `<span class="kit">⛔ ${esc(b)}<button data-act="blockdel" data-v="${esc(b)}" aria-label="Unblock ${esc(b)}">✕</button></span>`).join('')}<input type="text" id="block-repo" placeholder="owner/repo" style="width:160px"><button class="btn small" data-act="blockadd">+ Block</button></div>`;
+
+let S = null, saved = null, sim = { condIds: [], docsOnly: false, laneId: '' }, simResult = null, timer = null;
+const isCompany = () => S.mode === 'company';
+const L = () => isCompany() ? (S.company.defaults ||= {}) : S.project;     // the layer this page edits
+const F = () => S.flow;                                                     // the merged flow (what is enforced)
+const br = () => F().branches || { live: 'main', dev: 'dev' };
+const shared = () => br().dev || br().live;   // where sign-offs are checked
+const name = (id) => (F().roles[id] ? F().roles[id].name : id);
+const CORE = ['chief-of-staff'];
+const MODELS = { haiku: 'Cheapest (Haiku)', sonnet: 'Mid (Sonnet)', opus: 'Strongest (Opus)' };
+const dirty = () => JSON.stringify(isCompany() ? S.company : S.project) !== saved;
+const famOf = (id) => (id === 'chief-of-staff' ? 'on' : (F().family || {})[id] || 'optional');
+const roleIds = () => Object.keys(F().roles).filter((id) => F().roles[id].class !== 'lane').sort((a, b) => (a === 'chief-of-staff' ? -1 : b === 'chief-of-staff' ? 1 : 0) || ({ on: 0, optional: 1, off: 2 }[famOf(a)] - { on: 0, optional: 1, off: 2 }[famOf(b)]) || name(a).localeCompare(name(b)));
+
+function changed() {
+  render(); $('#savebar').classList.toggle('show', dirty());
+  clearTimeout(timer);
+  timer = setTimeout(async () => {
+    try { const st = await api('/api/check', isCompany() ? { company: S.company } : { project: S.project }); S.flow = st.flow; S.findings = st.findings; render(); runSim(); }
+    catch (e) { toast('Could not check', e.message); }
+  }, 180);
+}
+function laneLayer(id) { const l = (L().lanes ||= []); let x = l.find((z) => z.id === id); if (!x) { x = { id }; l.push(x); } return x; }
+function condLayer(id) { const l = (L().conditions ||= []); let x = l.find((z) => z.id === id); if (!x) { x = { id }; l.push(x); } return x; }
+
+// ---------- the picture: you → Chief of Staff → sessions ----------
+function hub() {
+  const ids = roleIds().filter((id) => id !== 'chief-of-staff' && famOf(id) !== 'off');
+  const W = 760, H = 340, cx = 400, cy = 178, rx = 270, ry = 128;
+  const n = ids.length, a0 = -150, a1 = 150;
+  const nodes = ids.map((id, i) => {
+    const a = ((n === 1 ? 0 : a0 + (a1 - a0) * (i / (n - 1))) * Math.PI) / 180;
+    const label = name(id); const w = Math.max(74, label.length * 7.6 + 26);
+    return { id, label, w, x: cx + rx * Math.cos(a) + 30, y: cy + ry * Math.sin(a), st: famOf(id) };
+  });
+  const edges = nodes.map((p) => `<path class="edge ${p.st}" d="M${cx + 30} ${cy} Q ${(cx + 30 + p.x) / 2} ${(cy + p.y) / 2 - 10} ${p.x} ${p.y}"/>`).join('');
+  const boxes = nodes.map((p) => `<g class="n ${p.st}" data-go="role-${esc(p.id)}" tabindex="0" role="button" aria-label="${esc(p.label)}, ${p.st}"><rect x="${p.x - p.w / 2}" y="${p.y - 15}" width="${p.w}" height="30" rx="15"/><text x="${p.x}" y="${p.y + 4.5}" text-anchor="middle">${esc(p.label)}</text></g>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="You talk to the Chief of Staff; it routes work to ${n} sessions">
+    <path class="main-edge" d="M78 ${cy} L ${cx - 46} ${cy}"/>
+    <text class="lbl" x="${(78 + cx - 46) / 2}" y="${cy - 10}" text-anchor="middle">you talk here</text>
+    ${edges}
+    <g class="you"><circle cx="50" cy="${cy}" r="28"/><text x="50" y="${cy + 4.5}" text-anchor="middle">You</text></g>
+    <g class="cos"><rect x="${cx - 46}" y="${cy - 24}" width="152" height="48" rx="24"/><text x="${cx + 30}" y="${cy + 5}" text-anchor="middle">Chief of Staff</text></g>
+    ${boxes}
+  </svg>`;
 }
 
-VIEWS.team = VIEWS.sessions;
-VIEWS.status = () => VIEWS.check() + '<div style="height:26px"></div>' + VIEWS.board();
-VIEWS.rules = () => VIEWS.gates() + '<div style="height:26px"></div>' + VIEWS.presets();
-// ---------------- render ----------------
-const TABS = [['flow', 'Flow'], ['team', 'Team'], ['status', 'Status'], ['rules', 'Rules'], ['company', 'Company']];
-const TAB_ALIAS = { sessions: 'team', gates: 'rules', presets: 'rules', check: 'status', board: 'status' };
+function teamCard(id) {
+  const r = F().roles[id], st = famOf(id), locked = CORE.includes(id);
+  const srcs = ((L().roles || {})[id] || {}).sources || [];
+  const seg = ['on', 'optional', 'off'].map((v) => `<button data-act="fam" data-id="${esc(id)}" data-v="${v}" aria-pressed="${st === v}">${{ on: 'On', optional: 'Optional', off: 'Off' }[v]}</button>`).join('');
+  return `<div class="card role is-${st}" id="role-${esc(id)}">
+    <div class="rtop"><span class="dot"></span><span class="rname">${esc(r.name)}</span><span class="rmodel">${esc(r.model || '')}</span></div>
+    <p class="job" title="${esc(r.job)}">${esc(r.job || 'No job written yet.')}</p>
+    ${locked ? '<div class="locked">Always on · you talk here</div>' : `<div class="seg" role="group" aria-label="${esc(r.name)} session">${seg}</div>`}
+    <details class="tools"><summary>Tools from GitHub${srcs.length ? ` (${srcs.length})` : ''}</summary>
+      <textarea rows="2" data-act="src" data-id="${esc(id)}" placeholder="github.com/owner/repo, one per line">${esc(srcs.join('\n'))}</textarea></details>
+  </div>`;
+}
+
+function ruleCard(c) {
+  const signers = roleIds().filter((id) => !['chief-of-staff', 'builder', 'hotfix'].includes(id) && famOf(id) !== 'off');
+  const words = Object.keys(F().words);
+  return `<div class="card rule">
+    <div><h3>${esc(c.label)}</h3><div class="when">When a piece changes files like ${(c.globs || []).slice(0, 2).map((g) => `<code>${esc(g)}</code>`).join(' ')}${(c.globs || []).length > 2 ? ` and ${(c.globs.length - 2)} more` : ''}</div></div>
+    <div class="row" style="justify-content:flex-end"><select data-act="cword" data-id="${esc(c.id)}" aria-label="Your word needed">
+      <option value="">No extra word from you</option>${words.map((w) => `<option value="${esc(w)}" ${c.require_word === w ? 'selected' : ''}>You say "${esc(w)}" first</option>`).join('')}</select></div>
+    <div class="globs" style="grid-column:1/-1"><div class="row"><span class="k">Must also sign</span><div class="chips">${signers.map((id) => `<button class="chip" data-act="creq" data-id="${esc(c.id)}" data-r="${esc(id)}" aria-pressed="${(c.require || []).includes(id)}">${esc(name(id))}</button>`).join('')}</div></div></div>
+    <details class="globs"><summary>Edit the files that count</summary><textarea rows="3" data-act="globs" data-id="${esc(c.id)}">${esc((c.globs || []).join('\n'))}</textarea></details>
+  </div>`;
+}
+
+function laneCard(l) {
+  const signers = roleIds().filter((id) => !['builder', 'hotfix'].includes(id) && famOf(id) !== 'off');
+  const steps = (l.stages || []).map((s) => {
+    if (s.kind === 'gate') return `<span class="step gate">${esc(s.title)}</span>`;
+    if (s.kind === 'word') return `<span class="step w">${esc(s.title)}</span>`;
+    return `<span class="step ${famOf(s.role) === 'off' ? 'off' : ''}" title="${esc(name(s.role))}: ${esc(s.produces || '')}">${esc(s.title)}</span>`;
+  }).join('<span class="arrow"></span>');
+  const exempt = l.live_exempt_signoffs;
+  return `<div class="card lane">
+    <div class="lhead"><h3>${esc(l.name)}</h3><span class="when">${esc(l.when || '')}</span></div>
+    <div class="pipe">${steps}</div>
+    ${exempt ? '<div class="row"><span class="k">Sign-offs</span><span class="chip static">None: it goes straight to your word</span></div>'
+      : `<div class="row"><span class="k">Signs before ${esc(shared())}</span><div class="chips">${signers.map((id) => `<button class="chip" data-act="lsig" data-id="${esc(l.id)}" data-r="${esc(id)}" aria-pressed="${(l.dev_signoffs || []).includes(id)}">${esc(name(id))}</button>`).join('')}</div></div>`}
+    <div class="row"><span class="k">Goes live when</span><span class="word">you say "${esc(l.live_word || '?')}"</span>${F().words[l.live_word] && F().words[l.live_word].relay ? '<span class="word soft">to the Chief of Staff, who relays it</span>' : '<span class="word soft">typed in the session that pushes</span>'}</div>
+  </div>`;
+}
+
+function helpersCard() {
+  const h = F().helpers || { max_per_session: 2, model: 'haiku' };
+  return `<div class="card helpers">
+    <div><div class="hk">Most helpers one session may start</div>
+      <div class="stepper"><button data-act="hmax" data-d="-1" aria-label="Fewer">−</button><b>${h.max_per_session}</b><button data-act="hmax" data-d="1" aria-label="More">+</button></div>
+      <p class="hnote">${h.max_per_session === 0 ? 'Sessions do all their work themselves.' : `A ${h.max_per_session + 1}${h.max_per_session === 1 ? 'nd' : h.max_per_session === 2 ? 'rd' : 'th'} helper is refused by the guard.`}</p></div>
+    <div><div class="hk">Model helpers must use</div>
+      <select data-act="hmodel" aria-label="Helper model">${Object.entries(MODELS).map(([k, v]) => `<option value="${k}" ${h.model === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <p class="hnote">A helper asking for a bigger model is refused. Each session starts helpers only when the work needs one.</p></div>
+  </div>`;
+}
+
 function render() {
-  const a = document.activeElement, aid = a && a.id, sel = a && 'selectionStart' in a ? [a.selectionStart, a.selectionEnd] : null;
-  const focNode = a && a.dataset && a.dataset.node !== undefined ? a.dataset.node : null; // canvas steps have no id
-  const errors = S.findings.filter((f) => f.level === 'error').length, warns = S.findings.filter((f) => f.level === 'warning').length;
-  $('#title').textContent = isCompany() ? 'Company defaults editor' : 'Flow editor';
-  $('#proj').textContent = `${String(S.root).split(/[\\/]/).filter(Boolean).pop()} · ${isCompany() ? 'company.json' : '.bootstrap/flow.json'}${dirty ? ' · unsaved changes' : ''}`;
-  $('#proj').title = S.root;
-  $('#inherits').innerHTML = !isCompany() && S.flow.company ? `<button class="badge b-mute" data-act="tab" data-id="company">🔒 Inherits: ${esc(S.flow.company.name)}${S.flow.company.sha ? ` @ ${esc(S.flow.company.sha)}` : ''}</button>` : '';
-  const b = $('#checkBadge');
-  b.className = `badge ${errors ? 'b-bad' : warns ? 'b-warn' : 'b-ok'}`;
-  b.textContent = errors ? `${errors} error${errors > 1 ? 's' : ''}${warns ? ` · ${warns} warning${warns > 1 ? 's' : ''}` : ''}` : warns ? `${warns} warning${warns > 1 ? 's' : ''}` : 'Flow OK';
-  $('#saveBtn').disabled = !!errors || !dirty;
-  $('#saveBtn').title = errors ? 'Fix the errors on the Check tab first' : dirty ? '' : 'No changes';
-  $('#nav').innerHTML = TABS.map(([k, n]) => `<button role="tab" data-act="tab" data-id="${k}" aria-selected="${k === tab}">${n}${k === 'status' && (errors + warns) ? ` <span class="badge ${errors ? 'b-bad' : 'b-warn'}">${errors + warns}</span>` : ''}</button>`).join('');
-  $('#undoBtn').disabled = !hist.length; $('#redoBtn').disabled = !fut.length;
-  const keepScroll = tab === 'flow' && $('#wrap') ? [$('#wrap').scrollLeft, lane] : null; // edits re-render; don't jump back to the start
-  $('#main').className = tab === 'flow' ? 'flowmain' : '';
-  $('#main').innerHTML = VIEWS[tab]() + (tab === 'flow' ? '' : `<footer>${isCompany() ? 'Saving writes company.json in the company folder. Commit and push it; projects take it with "Check for updates".' : 'Saving writes <code>.bootstrap/flow.json</code> (enforced by the guard and the pre-push hook once committed) and <code>docs/flow.md</code> (a readable copy with diagrams).'}</footer>`);
-  // Synchronous on purpose: reading sizes forces layout, and animation frames don't run in background tabs.
-  if (tab === 'flow') { if (autoFit) fitZoom(); applyZoom(); if (keepScroll && keepScroll[1] === lane && $('#wrap')) $('#wrap').scrollLeft = keepScroll[0]; }
-  if (focNode !== null) { const el = document.querySelector(`[data-node="${focNode}"]`); if (el) el.focus(); }
-  if (aid) { const el = document.getElementById(aid); if (el) { el.focus(); if (sel && 'setSelectionRange' in el) try { el.setSelectionRange(sel[0], sel[1]); } catch {} } }
+  const f = F(), on = roleIds().filter((id) => famOf(id) === 'on').length, opt = roleIds().filter((id) => famOf(id) === 'optional').length;
+  $('#where').textContent = isCompany() ? `Company defaults · ${S.root}` : S.root;
+  $('#col').innerHTML = `
+  <section class="card hero" aria-labelledby="h-hero">
+    <h2 id="h-hero">You talk to one session</h2>
+    <p class="lede" style="margin-bottom:4px">The Chief of Staff routes work to the family below, gets their reports, and relays your decisions. ${on} sessions are on; ${opt} start only when the Chief of Staff needs them or you ask.</p>
+    ${hub()}
+    <div class="legend"><span><i></i>On from the start</span><span><i class="opt"></i>Optional: started when needed</span></div>
+  </section>
+  <section id="team"><h2>Team</h2><p class="lede">Choose who runs from the start. <b>Optional</b> sessions are started by the Chief of Staff when the work needs them, or when you ask. Rules below can still require their sign-off.</p>
+    <h3 class="sub">On from the start</h3><div class="team">${roleIds().filter((id) => famOf(id) === 'on').map(teamCard).join('')}</div>
+    <h3 class="sub">Optional or off</h3><div class="team">${roleIds().filter((id) => famOf(id) !== 'on').map(teamCard).join('')}</div></section>
+  <section id="checks"><h2>Extra checks</h2><p class="lede">When a piece touches certain files, more sessions must sign before it reaches <code>${esc(shared())}</code>. This is how optional sessions like Security are brought in automatically.</p>
+    <div class="stack">${f.conditions.map(ruleCard).join('')}</div></section>
+  <section id="work"><h2>Kinds of work</h2><p class="lede">${br().dev ? `Work is shared on <code>${esc(br().dev)}</code> and goes live on <code>${esc(br().live)}</code>.` : `This project has no dev branch: pieces go to <code>${esc(br().live)}</code> through a release, and sign-offs are checked there.`} Each piece follows one of these. The Chief of Staff picks it; the push check enforces who signs and which of your words is on record.</p>
+    <div class="stack">${f.lanes.map(laneCard).join('')}</div></section>
+  <section id="helpers"><h2>Helpers</h2><p class="lede">Sessions may start small helper agents for side jobs like searching or summarising.</p>${helpersCard()}</section>`;
+  renderAside();
 }
 
-// ---------------- events ----------------
-document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-act]'); if (!t) return;
-  const act = t.dataset.act, l = lane && S.flow.lanes.find((x) => x.id === lane);
-  if (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA') { if (t.type !== 'checkbox') return; }
-  if (act === 'term') { return openHelp(t.dataset.id); }
-  if (act === 'help') { return openHelp(); }
-  if (act === 'hidewelcome') { welcomeHidden = true; try { localStorage.setItem('flow-welcome-hidden', '1'); } catch { /* fine */ } return render(); }
-  if (act === 'condword') { const c = S.flow.conditions[+t.dataset.i], lay = L(); lay.conditions ||= []; let x = lay.conditions.find((y) => y.id === c.id); if (!x) { x = JSON.parse(JSON.stringify(c)); lay.conditions.push(x); } if (t.checked) x.require_word = 'approve'; else x.require_word = ''; return changed(true); }
-  if (act === 'tab') { tab = t.dataset.id; stageSel = null; simState = null; return render(); }
-  if (act === 'lane') { lane = t.dataset.id; stageSel = null; simState = null; autoFit = true; return render(); }
-  if (act === 'plus') return edit((x) => { const st = newStage('stage', 'qa'); insertCol(x, +t.dataset.c, st); stageSel = x.stages.indexOf(st); }, 'Step inserted. Pick who does it on the right.');
-  if (act === 'zin') { autoFit = false; zoom = Math.min(1.4, +(zoom + 0.1).toFixed(2)); return applyZoom(); }
-  if (act === 'zout') { autoFit = false; zoom = Math.max(0.5, +(zoom - 0.1).toFixed(2)); return applyZoom(); }
-  if (act === 'zfit') { autoFit = true; fitZoom(); return applyZoom(); }
-  if (act === 'simrun') return runSim();
-  if (act === 'desel') { stageSel = null; return render(); }
-  if (act === 'aprm') return edit((x) => { x.dev_signoffs = (x.dev_signoffs || []).filter((r) => r !== t.dataset.r); });
-  if (act === 'side') return edit((x) => { x.stages[stageSel].with_previous = t.checked; });
-  if (act === 'role') { roleSel = t.dataset.id; return render(); }
-  if (act === 'goto') { const [tb, id] = t.dataset.where.split(':'); tab = TAB_ALIAS[tb] || tb; if (tab === 'flow' && id) lane = id; if (tab === 'team' && id) roleSel = id; return render(); }
-  if (act === 'mv') return edit((x) => { const cols = colsOf(x), c = colsOf(x).findIndex((col) => col.some((e) => e.i === stageSel)), g = +t.dataset.d > 0 ? c + 2 : c - 1; if (g < 0 || g > cols.length) return; const st = x.stages[stageSel]; moveToCol(x, stageSel, g); stageSel = x.stages.indexOf(st); });
-  if (act === 'delstage') return edit((x) => { removeAt(x, stageSel); stageSel = null; }, 'Step removed. Undo with Ctrl+Z.');
-  if (act === 'addlane') {
-    let n = 1; while (S.flow.lanes.some((x) => x.id === `lane-${n}`)) n++;
-    const lay = L(); lay.lanes ||= [];
-    lay.lanes.push({ id: `lane-${n}`, name: `New lane ${n}`, when: '', stages: [{ kind: 'stage', role: 'builder', title: 'Build', produces: 'Own branch' }, { kind: 'gate', gate: 'dev', title: 'Push to dev' }, { kind: 'word', word: 'release', title: '"release <scope>"' }, { kind: 'gate', gate: 'live', title: 'Push live' }], dev_signoffs: ['tech-lead', 'chief-of-staff'], live_word: 'release', live_exempt_signoffs: false });
-    snapshot(); lane = `lane-${n}`; stageSel = null; autoFit = true; return changed(true);
-  }
-  if (act === 'dellane') { if (!confirm(`Remove the lane "${l.name}"? Pieces that name it fall back to Normal.`)) return; snapshot(); const lay = L(); lay.lanes = (lay.lanes || []).filter((x) => x.id !== lane); lay.lanes.push({ id: lane, removed: true }); lane = null; return changed(true); }
-  if (act === 'gate') { const x = laneEdit(t.dataset.l), r = t.dataset.r; x.dev_signoffs ||= []; x.dev_signoffs = x.dev_signoffs.includes(r) && t.type === 'checkbox' && !t.checked ? x.dev_signoffs.filter((y) => y !== r) : [...new Set([...x.dev_signoffs, r])]; return changed(true); }
-  if (act === 'relay') { const lay = L(); lay.words ||= {}; lay.words[t.dataset.w] = { ...(lay.words[t.dataset.w] || {}), relay: t.checked }; return changed(true); }
-  if (act === 'addcond') { const lay = L(); lay.conditions ||= []; let n = 1; while (S.flow.conditions.some((c) => c.id === `cond-${n}`)) n++; lay.conditions.push({ id: `cond-${n}`, label: 'New condition', globs: ['path/**'], require: ['tech-lead'] }); return changed(true); }
-  if (act === 'delcond') { const c = S.flow.conditions[+t.dataset.i]; const lay = L(); lay.conditions = (lay.conditions || []).filter((x) => x.id !== c.id); lay.conditions.push({ id: c.id, removed: true }); return changed(true); }
-  if (act === 'kitadd') { const k = t.dataset.k, v = $(`#add-${k}`).value.trim(); if (!v) return; const r = roleEdit(roleSel); r[k] = [...new Set([...(r[k] || S.flow.roles[roleSel][k] || []), v])]; return changed(true); }
-  if (act === 'kitdel') { const k = t.dataset.k, r = roleEdit(roleSel); r[k] = (r[k] || S.flow.roles[roleSel][k] || []).filter((x) => x !== t.dataset.v); return changed(true); }
-  if (act === 'addrole') { const id = $('#newRole').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, ''); if (!id || S.flow.roles[id]) return toast(id ? `"${id}" already exists` : 'Type an id like data-engineer'); Object.assign(roleEdit(id), { name: id.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()), class: 'custom', job: '', never: '', model: 'mid' }); roleSel = id; return changed(true); }
-  if (act === 'delrole') { if (!confirm(`Remove the session "${rname(roleSel)}"?`)) return; delete (L().roles || {})[roleSel]; roleSel = 'builder'; return changed(true); }
-  if (act === 'preset') { if ((L().lanes || []).length && !confirm('Switching preset replaces your lane edits. Continue?')) return; const lay = L(); lay.preset = t.dataset.id; delete lay.lanes; return changed(true); }
-  if (act === 'updates') {
-    try { const u = await api('/api/company/updates', { project: S.project }); $('#upd').innerHTML = u.upToDate ? '<span class="badge b-ok">up to date</span>' : `<span class="badge b-warn">newer: ${esc(u.latest.slice(0, 12))}</span> <button class="btn small" data-act="apply" data-sha="${esc(u.latest)}">Use it</button>`; }
-    catch (err) { $('#upd').innerHTML = `<span class="badge b-bad">${esc(err.message)}</span>`; }
-    return;
-  }
-  if (act === 'apply') { try { const st = await api('/api/company/apply', { project: S.project, sha: t.dataset.sha }); S = { ...S, ...st }; dirty = true; render(); toast(st.note); } catch (err) { toast(err.message); } return; }
-  if (act === 'floor') { const C = S.company, a = C.floor.signoffs['*'] || []; C.floor.signoffs['*'] = t.checked ? [...new Set([...a, t.dataset.r])] : a.filter((x) => x !== t.dataset.r); return changed(true); }
-  if (act === 'norelay') { const f = S.company.floor; f.no_relay = t.checked ? [...new Set([...f.no_relay, t.dataset.w])] : f.no_relay.filter((x) => x !== t.dataset.w); return changed(true); }
-  if (act === 'csrcadd') { const role = $('#csrc-role').value, repo = $('#csrc-repo').value.trim(); if (!repo) return; (S.company.sources[role] ||= []).push({ repo, required: false }); return changed(true); }
-  if (act === 'csrcreq') { S.company.sources[t.dataset.r][+t.dataset.i].required = t.checked; return changed(true); }
-  if (act === 'csrcdel') { S.company.sources[t.dataset.r].splice(+t.dataset.i, 1); if (!S.company.sources[t.dataset.r].length) delete S.company.sources[t.dataset.r]; return changed(true); }
-  if (act === 'blockadd') { const v = $('#block-repo').value.trim().replace(/^https?:\/\/github\.com\//, ''); if (!v) return; S.company.defaults.blocked_sources = [...new Set([...S.company.defaults.blocked_sources, v])]; return changed(true); }
-  if (act === 'blockdel') { S.company.defaults.blocked_sources = S.company.defaults.blocked_sources.filter((x) => x !== t.dataset.v); return changed(true); }
-});
-document.addEventListener('change', (e) => {
-  const t = e.target, act = t.dataset && t.dataset.act; if (!act) return;
-  if (act === 'st') return edit((x) => { const st = x.stages[stageSel]; st[t.dataset.k] = t.value; if (t.dataset.k === 'word') st.title = { approve: "Owner's approval", go: "Owner's \"go\"", release: '"release <scope>"', apply: '"apply"' }[t.value] || st.title; });
-  if (act === 'ln') return edit((x) => { x[t.dataset.k] = t.value; });
-  if (act === 'apadd' && t.value) return edit((x) => { x.dev_signoffs = [...new Set([...(x.dev_signoffs || []), t.value])]; }, `${rname(t.value)} must now approve at this checkpoint.`);
-  if (act === 'rf') { roleEdit(roleSel)[t.dataset.k] = t.value; return changed(true); }
-  if (act === 'cond') { const c = S.flow.conditions[+t.dataset.i], lay = L(); lay.conditions ||= []; let x = lay.conditions.find((y) => y.id === c.id); if (!x) { x = JSON.parse(JSON.stringify(c)); lay.conditions.push(x); } x[t.dataset.k] = t.dataset.k === 'globs' ? t.value.split(',').map((s) => s.trim()).filter(Boolean) : t.dataset.k === 'require' ? [t.value] : t.value; return changed(true); }
-  if (act === 'ext') { if (t.value.trim()) S.project.extends = t.value.trim(); else delete S.project.extends; return changed(true); }
-  if (act === 'cname') { S.company.name = t.value; return changed(true); }
-  if (act === 'cpreset') { S.company.defaults.preset = t.value; return changed(true); }
-});
-document.addEventListener('change', (e) => { const k = e.target.dataset && e.target.dataset.sim; if (k) simPick = e.target.checked ? [...new Set([...simPick, k])] : simPick.filter((x) => x !== k); });
-document.addEventListener('input', (e) => {
-  if (e.target.dataset && e.target.dataset.act === 'src') { roleEdit(roleSel).sources = e.target.value.split(/\r?\n/).map((s) => s.trim()).filter(Boolean); changed(); }
-});
-$('#saveBtn').addEventListener('click', async () => {
-  try { const r = await api('/api/save', isCompany() ? { company: S.company } : { project: S.project }); dirty = false; render(); toast(isCompany() ? `Saved. ${r.note}` : 'Saved. Next step: commit .bootstrap/flow.json and docs/flow.md (ask the Chief of Staff, or use git). The new rules apply once that commit is pushed.'); }
-  catch (e) { toast(`Not saved: ${e.message}`); if (e.data && e.data.findings) { S.findings = e.data.findings; tab = 'check'; render(); } }
-});
-$('#helpBtn').addEventListener('click', () => openHelp());
-$('#undoBtn').addEventListener('click', () => undo());
-$('#redoBtn').addEventListener('click', () => redo());
-$('#wizardBtn').addEventListener('click', () => { if (isCompany()) return toast('The wizard sets up a project flow; open the editor inside a project.'); openWizard(); });
-$('#wzNext').addEventListener('click', () => { wzAns[wz] = $('input[name=wz]:checked').value; if (++wz < WZ.length) return showWz(); finishWizard(); });
-$('#wzSkip').addEventListener('click', () => { $('#wizard').hidden = true; try { localStorage.setItem('flow-wizard-done', '1'); } catch { /* fine */ } });
-window.addEventListener('resize', () => { if (tab === 'flow') { if (autoFit) fitZoom(); applyZoom(); } });
-$('#drawerClose').addEventListener('click', () => { $('#drawer').hidden = true; $('#helpBtn').focus(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#drawer').hidden) { $('#drawer').hidden = true; $('#helpBtn').focus(); } });
-$('#themeBtn').addEventListener('click', () => { const r = document.documentElement; r.dataset.theme = (r.dataset.theme === 'dark' || (!r.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches)) ? 'light' : 'dark'; });
-window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
-// Deep links: #gates, #sessions/builder, #flow/high, #help (shareable, and used for the README screenshots).
-function fromHash() {
-  const [t, id] = decodeURIComponent(location.hash.slice(1)).split('/');
-  if (t === 'help') return openHelp(id);
-  const k = TAB_ALIAS[t] || t;
-  if (t === 'wizard') { tab = 'flow'; return setTimeout(openWizard, 0); }
-  if (t === 'simulate') { tab = 'flow'; simPick = (id || '').split(',').filter(Boolean); return setTimeout(runSim, 0); } // e.g. #simulate/sensitive,screens
-  if (TABS.some(([x]) => x === k)) { tab = k; if (k === 'team' && id) roleSel = id; if (k === 'flow' && id) lane = id; }
+function renderAside() {
+  const f = F(), r = simResult;
+  const findings = (S.findings || []).filter((x) => x.level !== 'ok');
+  const oks = (S.findings || []).filter((x) => x.level === 'ok');
+  $('#aside').innerHTML = `
+  <div class="card panel"><h3>Try a change</h3><p>Pick what a change touches to see who signs and what you are asked.</p>
+    <div class="checks">${f.conditions.map((c) => `<label><input type="checkbox" data-act="simc" value="${esc(c.id)}" ${sim.condIds.includes(c.id) ? 'checked' : ''}>${esc(c.label)}</label>`).join('')}
+      <label><input type="checkbox" data-act="simd" ${sim.docsOnly ? 'checked' : ''}>Only docs</label></div>
+    <select data-act="siml" aria-label="Kind of work" style="width:100%;margin-bottom:12px"><option value="">Kind of work: let the Chief of Staff pick</option>${f.lanes.map((l) => `<option value="${esc(l.id)}" ${sim.laneId === l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select>
+    ${r ? `<div class="result">${r.docsOnly ? '<div>Docs-only commits ride along. No sign-offs needed.</div>' : `
+      <div><div class="k">Follows</div>${esc(f.lanes.find((l) => l.id === r.lane)?.name || r.lane)}</div>
+      <div><div class="k">Signs before ${esc(shared())}</div><div class="chips">${r.required.length ? r.required.map((id) => `<span class="chip static" ${r.added.includes(id) ? 'aria-pressed="true"' : ''}>${esc(name(id))}</span>`).join('') : 'Nobody'}</div></div>
+      <div><div class="k">You are asked</div><div class="chips">${r.words.map((w) => `<span class="word">"${esc(w)}"</span>`).join('') || 'Nothing'}</div></div>`}</div>` : ''}
+  </div>
+  <div class="card panel"><h3>Checks</h3>
+    ${findings.length ? findings.map((x) => `<div class="finding"><span class="lv ${x.level}">${x.level === 'warning' ? 'warn' : x.level}</span><div>${esc(x.msg)}${x.fix ? `<div style="color:var(--ink3)">${esc(x.fix)}</div>` : ''}</div></div>`).join('') : ''}
+    ${oks.map((x) => `<div class="finding"><span class="lv ok">ok</span><div>${esc(x.msg)}</div></div>`).join('')}
+  </div>
+  <div class="card panel"><h3>After you save</h3><p style="margin:0">Tell the Chief of Staff <b>"apply the flow change"</b>. It reads the change back to you, records your yes, and pushes it. Nothing changes for the family until then.</p></div>`;
 }
-window.addEventListener('hashchange', () => { fromHash(); if (S) render(); });
-api('/api/state').then((st) => { S = st; if (S.mode === 'company') { S.company ||= { version: 1, name: 'Company' }; } fromHash(); render(); if (wizardNeeded() && location.hash !== '#nowizard') openWizard(); }).catch((e) => { $('#main').innerHTML = `<div class="panel"><b>Could not load:</b> ${esc(e.message)}. Open the exact link printed by <code>bootstrap flow</code>.</div>`; });
+
+async function runSim() {
+  try { simResult = await api('/api/simulate', { ...(isCompany() ? { company: S.company } : { project: S.project }), condIds: sim.condIds, docsOnly: sim.docsOnly && !sim.condIds.length, laneId: sim.laneId || null }); renderAside(); } catch { /* shown in checks */ }
+}
+
+document.addEventListener('click', (e) => {
+  const go = e.target.closest('[data-go]'); if (go) { document.getElementById(go.dataset.go)?.scrollIntoView({ block: 'center' }); return; }
+  const t = e.target.closest('[data-act]'); if (!t || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.type === 'checkbox') return;
+  const { act, id } = t.dataset;
+  if (act === 'fam') { (L().family ||= {})[id] = t.dataset.v; return changed(); }
+  if (act === 'lsig') { const lane = F().lanes.find((l) => l.id === id); const cur = new Set(lane.dev_signoffs || []); cur.has(t.dataset.r) ? cur.delete(t.dataset.r) : cur.add(t.dataset.r); laneLayer(id).dev_signoffs = [...cur]; return changed(); }
+  if (act === 'creq') { const c = F().conditions.find((x) => x.id === id); const cur = new Set(c.require || []); cur.has(t.dataset.r) ? cur.delete(t.dataset.r) : cur.add(t.dataset.r); condLayer(id).require = [...cur]; return changed(); }
+  if (act === 'hmax') { const h = { ...(F().helpers || {}), ...(L().helpers || {}) }; L().helpers = { ...(L().helpers || {}), max_per_session: Math.max(0, Math.min(5, (h.max_per_session ?? 2) + Number(t.dataset.d))) }; return changed(); }
+});
+document.addEventListener('keydown', (e) => { const g = e.target.closest?.('[data-go]'); if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); g.dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
+document.addEventListener('change', (e) => {
+  const t = e.target, { act, id } = t.dataset;
+  if (act === 'cword') { condLayer(id).require_word = t.value || null; return changed(); }
+  if (act === 'hmodel') { L().helpers = { ...(L().helpers || {}), model: t.value }; return changed(); }
+  if (act === 'globs') { condLayer(id).globs = t.value.split('\n').map((s) => s.trim()).filter(Boolean); return changed(); }
+  if (act === 'src') { const roles = (L().roles ||= {}); roles[id] = { ...(roles[id] || {}), sources: t.value.split('\n').map((s) => s.trim()).filter(Boolean) }; return changed(); }
+  if (act === 'simc') { sim.condIds = [...document.querySelectorAll('[data-act=simc]:checked')].map((x) => x.value); return runSim(); }
+  if (act === 'simd') { sim.docsOnly = t.checked; return runSim(); }
+  if (act === 'siml') { sim.laneId = t.value; return runSim(); }
+});
+
+function toast(title, msg) {
+  document.querySelector('.toast')?.remove();
+  const d = document.createElement('div'); d.className = 'toast'; d.setAttribute('role', 'status');
+  d.innerHTML = `<b>${esc(title)}</b>${esc(msg || '')}`; document.body.append(d); setTimeout(() => d.remove(), 7000);
+}
+$('#save').onclick = async () => {
+  $('#save').disabled = true;
+  try {
+    await api('/api/save', isCompany() ? { company: S.company } : { project: S.project });
+    saved = JSON.stringify(isCompany() ? S.company : S.project); $('#savebar').classList.remove('show');
+    toast('Saved', isCompany() ? ' Commit and push the company repo; projects pick it up with "check for updates".' : ' Now tell the Chief of Staff "apply the flow change". It reads the change back to you and records your yes.');
+  } catch (err) { toast('Not saved', ` ${err.message}${err.findings ? ': ' + err.findings.filter((f) => f.level === 'error').map((f) => f.msg).join(' ') : ''}`); }
+  $('#save').disabled = false;
+};
+$('#undo').onclick = async () => { const back = JSON.parse(saved); if (isCompany()) S.company = back; else S.project = back; changed(); };
+$('#theme').onclick = () => { const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; r.dataset.theme = dark ? 'light' : 'dark'; try { localStorage.setItem('flow-theme', r.dataset.theme); } catch {} };
+try { const t = localStorage.getItem('flow-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+window.addEventListener('beforeunload', (e) => { if (S && dirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+api('/api/state').then((st) => {
+  S = st; if (isCompany()) S.company ||= { version: 1, name: 'Company' };
+  saved = JSON.stringify(isCompany() ? S.company : S.project); render(); runSim();
+}).catch((e) => { $('#col').innerHTML = `<div class="card hero"><h2>Could not load</h2><p class="lede">${esc(e.message)}. Ask the Chief of Staff to open the flow editor again; the link carries a one-time key.</p></div>`; });
 </script>
 </body>
 </html>

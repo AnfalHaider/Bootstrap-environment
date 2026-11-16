@@ -35,7 +35,7 @@ before(() => {
   execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repo });
   sh(['config', 'user.email', 'test@example.invalid']);
   sh(['config', 'user.name', 'test']);
-  const r = spawnSync(process.execPath, [join(KIT, 'bin', 'bootstrap.mjs'), 'init'], { cwd: repo, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [join(KIT, 'bin', 'bootstrap.mjs'), 'init', '--dev', 'dev'], { cwd: repo, encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   write('src/app.js', 'export const a = 1;\n');
   commit('base');
@@ -87,7 +87,8 @@ describe('flow layers and company locks', () => {
   });
   test('conditions add roles by file path; pasted links parse', () => {
     const { flow } = flowWith({ version: 1 });
-    assert.deepEqual(requiredFor(flow, 'no-screen', ['src/auth/login.js']), ['chief-of-staff', 'librarian', 'qa', 'security', 'tech-lead']);
+    assert.deepEqual(requiredFor(flow, 'no-screen', ['src/auth/login.js']), ['chief-of-staff', 'librarian', 'qa', 'security']);
+    assert.deepEqual(requiredFor(flow, 'no-screen', ['db/migrations/1.sql']), ['chief-of-staff', 'librarian', 'qa', 'tech-lead']);
     assert.deepEqual(requiredFor(flow, 'hotfix', ['src/auth/login.js']), []);
     assert.equal(parseSource('https://github.com/anthropics/skills/tree/main/skills/pdf').kind, 'Skill folder');
     assert.equal(parseSource('https://gitlab.com/x/y').ok, false);

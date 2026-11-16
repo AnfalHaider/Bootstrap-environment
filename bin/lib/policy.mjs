@@ -11,7 +11,7 @@ export const DEFAULT_POLICY = {
   // Only the Chief of Staff writes these, on the owner's typed word (AGENTS.md is the standing rules).
   protected_globs: ['.bootstrap/**', '.claude/settings.json', '.githooks/**', 'AGENTS.md', 'CLAUDE.md'],
   signoffs: { dir: 'docs/signoffs', default_required: ['qa', 'tech-lead', 'librarian', 'chief-of-staff'] },
-  releases: { dir: 'docs/releases', live_pushers: ['release-ops', 'hotfix'], exempt_from_signoffs: ['hotfix'] },
+  releases: { dir: 'docs/releases', live_pushers: ['release-ops', 'hotfix', 'chief-of-staff'], exempt_from_signoffs: ['hotfix'] },
   // Regexes. Matched against the whole shell command. Applies to every role.
   deny_all: [
     '\\bgit\\s+push\\b.*\\s(--force|-f|--force-with-lease)(\\s|=|$)',
@@ -30,6 +30,19 @@ export function git(args, cwd, opts = {}) {
   } catch {
     return null;
   }
+}
+
+// The project's own branch names. Live: the remote's default branch, else the first of the usual
+// names that exists, else the current branch. Dev: an integration branch only if one exists (null = none:
+// pieces go straight to live through a release, and sign-offs are checked on that push).
+export const LIVE_NAMES = ['main', 'master', 'trunk', 'production', 'prod', 'release'];
+export const DEV_NAMES = ['develop', 'dev', 'development', 'staging', 'stage', 'next', 'integration'];
+export function detectBranches(root) {
+  const has = (b) => git(['rev-parse', '--verify', '--quiet', `refs/heads/${b}`], root) || git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${b}`], root);
+  const head = git(['symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD'], root);
+  const live = (head && head.replace(/^origin\//, '')) || LIVE_NAMES.find(has) || git(['symbolic-ref', '--quiet', '--short', 'HEAD'], root) || 'main';
+  const dev = DEV_NAMES.find((b) => b !== live && has(b)) || null;
+  return { live, dev };
 }
 
 export function repoRoot(cwd) {

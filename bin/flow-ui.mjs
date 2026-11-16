@@ -108,7 +108,7 @@ export function makeServer({ root = null, companyDir = null, token = randomBytes
         const md = join(root, 'docs', 'flow.md');
         mkdirSync(dirname(md), { recursive: true });
         writeFileSync(md, renderMarkdown(st.flow));
-        return send(res, 200, { saved: ['.bootstrap/flow.json', 'docs/flow.md'], note: 'Commit both. The pre-push hook applies the new flow once this commit is on the remote.' });
+        return send(res, 200, { saved: ['.bootstrap/flow.json', 'docs/flow.md'], note: 'Saved. Tell the Chief of Staff "apply the flow change": it reads the change back to you, records your yes, and pushes it.' });
       }
       if (url.pathname === '/api/company/updates' || url.pathname === '/api/company/apply') {
         const project = body.project || layersFor().project;

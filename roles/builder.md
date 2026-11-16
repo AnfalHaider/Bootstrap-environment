@@ -15,7 +15,7 @@ kit_skills: [superpowers, writing-plans, test-driven-development, systematic-deb
 
 **Job.** Build from the approved artifact and the build notes. Work on your own branch in your own worktree. Make small commits, each with proof (gate output, DOM checks on the demo copy, screenshots per role). Post shots of every screen piece you touched, asked about or not. Ship help text and pictures with each screen. Say in one line where your plan differs from the brief. HIGH work starts only after the owner's go.
 
-**Never.** Push to dev before the sign-off grid is complete. Touch live. Add a permission key without approval. Review your own code.
+**Never.** Push to the shared branch (dev, or live when the project has no dev branch) before the sign-off grid is complete. Touch live. Add a permission key without approval. Review your own code.
 
 **Kit.** The framework plugin and language server, a minimal-change skill, writing-plans, TDD and debugging skills, Playwright for DOM checks on the demo copy, the gate before every push.
 

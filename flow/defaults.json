@@ -1,5 +1,24 @@
 {
   "version": 1,
+  "family": {
+    "chief-of-staff": "on",
+    "builder": "on",
+    "qa": "on",
+    "design": "on",
+    "librarian": "on",
+    "researcher": "on",
+    "security": "optional",
+    "tech-lead": "optional",
+    "release-ops": "optional",
+    "hotfix": "optional",
+    "platform": "optional",
+    "support": "optional",
+    "project-lane": "off"
+  },
+  "helpers": {
+    "max_per_session": 2,
+    "model": "haiku"
+  },
   "lanes": [
     {
       "id": "normal",
@@ -74,7 +93,6 @@
       ],
       "dev_signoffs": [
         "qa",
-        "tech-lead",
         "librarian",
         "chief-of-staff"
       ],
@@ -129,7 +147,6 @@
       ],
       "dev_signoffs": [
         "qa",
-        "tech-lead",
         "librarian",
         "chief-of-staff"
       ],

@@ -106,13 +106,13 @@ Pick ONE per need. → `references/stack-and-plugins.md`
 settings backed up first. **5 — VERIFY**: a real LSP query, a real MCP call, a real browser action,
 every hook branch. Only what passed is enabled.
 
-**6 — SCAFFOLD.** `node bin/bootstrap.mjs init --size <prototype|small|live> --live <branch> --dev <branch>` (add `--project-hooks`
+**6 — SCAFFOLD.** Already bootstrapped (`.bootstrap/policy.json` exists)? Upgrade instead: `bootstrap upgrade`, tell the owner what changes, and on their yes `bootstrap kit apply` (the `/upgrade` command walks through it). Otherwise `node bin/bootstrap.mjs init --size <prototype|small|live>` (branches are detected: live = the remote default, dev only if one exists; override with `--live <b> --dev <b>|none`) (add `--project-hooks`
 for Claude Code sessions without the plugin, e.g. cloud). Then: write the 0H answers into `AGENTS.md`
 and `.bootstrap/policy.json` (`destructive_commands`), absorb existing conventions (move, don't
 retype), and build the gate if none exists. → `references/scaffold-and-memory.md`,
 `references/operating-rules.md`
 
-**7 — SESSION FAMILY.** Ask which preset fits (Full company / Small team / Solo / Custom) and whether a company defaults repo exists; then offer the visual editor (`bootstrap flow --open`) so the owner can shape lanes, gates and sessions and paste preferred sources. Run `bootstrap flow check` until it passes. Show the owner one table — role id · job in this project · proposed display
+**7 — SESSION FAMILY.** The owner talks only to the Chief of Staff; every other session reports to it. Ask which preset fits (Full company / Small team / Solo / Custom) and whether a company defaults repo exists. Offer the flow editor (`/flow`, or start `bootstrap flow` and open its link in the browser pane) so the owner can switch sessions On / Optional / Off, adjust extra checks and the helper limit; or take the changes in chat. Record the owner's yes with `bootstrap flow apply` and run `bootstrap flow check` until it passes. Start only the sessions On from the start (`bootstrap family`); optional ones start when a piece needs them or the owner asks. Show the owner one table — role id · job in this project · proposed display
 name · kit — and get names confirmed, project lanes chosen, on-demand roles (Platform, Support)
 started only when due. Each writing session: its own worktree with REAL dependency folders, `bootstrap
 role <id>`, its own database copy on the one shared server. Start in order (permanent nested sessions where the tool supports them), each with its role file
