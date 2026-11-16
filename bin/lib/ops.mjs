@@ -94,7 +94,7 @@ export function changedFiles(root, policy) {
   const out = base ? git(['diff', '--name-only', `${base}...HEAD`], root) : null;
   return out ? out.split('\n').filter(Boolean) : [];
 }
-function newestCode(root, policy) {
+export function newestCode(root, policy) {
   const base = devBase(root, policy);
   const list = (git(['rev-list', base ? `${base}..HEAD` : 'HEAD', '--max-count', '200'], root) || '').split('\n').filter(Boolean);
   for (const c of list) {

@@ -21,6 +21,23 @@ import { hasEvidence } from './lib/ops.mjs';
 
 const ZERO = /^0+$/;
 
+// Files that adopting the kit adds or changes. A push made of only these, onto a branch whose remote
+// side has no .bootstrap/policy.json yet, is the adoption itself: the rules are judged from the
+// remote side (as the flow is), and before adoption there are none to judge by. After it, changing
+// any of these goes through the full flow like any other code.
+const KIT_GLOBS = ['.bootstrap/**', '.githooks/**', '.claude/settings.json', '.gitignore', 'AGENTS.md', 'CLAUDE.md',
+  'GEMINI.md', '.aider.conf.yml', '.cursor/**', '.codex/**', '.agents/**', '.kiro/**', '.clinerules/**',
+  '.github/copilot-instructions.md', '.github/agents/**', 'chatgpt-export/**', 'scripts/bootstrap', 'scripts/bootstrap.*'];
+
+function adoptedAt(root, remoteSha) {
+  const has = (sha) => git(['cat-file', '-e', `${sha}:.bootstrap/policy.json`], root) !== null;
+  // An unknown remote tip (not fetched) is treated as adopted: never relax on what we cannot see.
+  if (!ZERO.test(remoteSha)) return git(['cat-file', '-e', remoteSha], root) === null || has(remoteSha);
+  // A new branch: adopted if any branch the remote already has carries the kit.
+  const refs = (git(['for-each-ref', '--format=%(objectname)', 'refs/remotes'], root) || '').split('\n').filter(Boolean);
+  return refs.some(has);
+}
+
 function lsTree(root, sha, dir) {
   const out = git(['ls-tree', '-r', '--name-only', sha, '--', dir], root);
   return out ? out.split('\n').filter(Boolean) : [];
@@ -81,6 +98,12 @@ export function completeSignoffs(root, sha, policy, { flow = null, codeCommits =
     if (!lane) { notes.push(`${p.piece}: lane "${p.lane}" is not in the flow`); continue; }
     if (lane.live_exempt_signoffs && role !== 'hotfix') lane = laneOf(flow, 'normal');
     let why = '';
+    if (!Object.keys(p.signed).length) {
+      const files = codeCommits.flatMap((c) => (git(['diff-tree', '--no-commit-id', '--name-only', '-r', '-m', '--root', c], root) || '').split('\n').filter(Boolean));
+      const weak = (p.weak || []).length ? ` (PASS without evidence from ${p.weak.join(', ')})` : '';
+      notes.push(`${p.piece} (lane ${lane.id}): no sign-offs yet${weak}; needs ${requiredFor(flow, lane.id, files, p.extra).join(', ')}`);
+      continue;
+    }
     for (const S of [...new Set(Object.values(p.signed))]) {
       const covered = codeCommits.filter((c) => git(['merge-base', '--is-ancestor', c, S], root) !== null);
       const files = covered.flatMap((c) => (git(['diff-tree', '--no-commit-id', '--name-only', '-r', '-m', '--root', c], root) || '').split('\n').filter(Boolean));
@@ -144,11 +167,19 @@ export function checkPush({ root, policy, role, localSha, remoteRef, remoteSha }
 
   if (!guarded) return errors;
 
-  const codeCommits = commits.filter((c) => {
-    const files = (git(['diff-tree', '--no-commit-id', '--name-only', '-r', '-m', '--root', c], root) || '')
-      .split('\n').filter(Boolean);
-    return files.some((f) => !matchesAny(f, policy.docs_globs));
-  });
+  const filesOf = (c) => (git(['diff-tree', '--no-commit-id', '--name-only', '-r', '-m', '--root', c], root) || '')
+    .split('\n').filter(Boolean);
+  const codeCommits = commits.filter((c) => filesOf(c).some((f) => !matchesAny(f, policy.docs_globs)));
+
+  // Adoption: the first push of the kit itself, before the remote side has any rules.
+  if (codeCommits.length && !adoptedAt(root, remoteSha)) {
+    const outside = [...new Set(codeCommits.flatMap(filesOf)
+      .filter((f) => !matchesAny(f, policy.docs_globs) && !matchesAny(f, KIT_GLOBS)))];
+    if (!outside.length) return errors;
+    errors.push(`the kit is not on "${branch}" yet, so this push adopts it: push the kit on its own first, then the rest goes through the flow. ` +
+      `Outside the kit: ${outside.slice(0, 5).join(', ')}${outside.length > 5 ? ` and ${outside.length - 5} more` : ''}`);
+    return errors;
+  }
 
   if (branch === policy.branches.live) {
     if (!policy.releases.live_pushers.includes(role)) errors.push(`role "${role}" may not push "${branch}"`);

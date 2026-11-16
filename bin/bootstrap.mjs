@@ -26,7 +26,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseFrontmatter } from './lib/fm.mjs';
 import { DEFAULT_POLICY, currentRole, git, globToRegex, loadPolicy, repoRoot } from './lib/policy.mjs';
 import { loadFlow } from './lib/flow.mjs';
-import { boardArchive, boardMine, brief, cost, next, suggest } from './lib/ops.mjs';
+import { boardArchive, boardMine, brief, cost, newestCode, next, suggest } from './lib/ops.mjs';
 import { completeSignoffs } from './prepush.mjs';
 import { runFlowUi } from './flow-ui.mjs';
 
@@ -171,7 +171,9 @@ function signoff(root, piece, args) {
   const me = currentRole(root);
   const r = arg(args, 'role', me);
   if (me !== 'unassigned' && r !== me) { console.error(`This session is "${me}"; it cannot sign as "${r}". A session signs only as itself.`); process.exit(1); }
-  const sha = arg(args, 'sha', git(['rev-parse', 'HEAD'], root));
+  // Sign the code, not the tip: other sessions' sign-off commits (docs only) sit on top of it.
+  const policy = loadPolicy(root);
+  const sha = arg(args, 'sha', (policy && newestCode(root, policy)) || git(['rev-parse', 'HEAD'], root));
   const verdict = (arg(args, 'verdict', '') || '').toUpperCase();
   if (!['PASS', 'FAIL'].includes(verdict)) { console.error('--verdict PASS|FAIL is required'); process.exit(1); }
   if (r === 'unassigned') { console.error('no role: run `bootstrap role <id>` (or, as the owner outside a session, pass --role)'); process.exit(1); }

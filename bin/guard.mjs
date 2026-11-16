@@ -86,7 +86,11 @@ function shellRecordCheck(command, role, policy) {
 }
 
 export function decide({ tool, command = '', filePath = '', cwd = process.cwd() }) {
-  const root = repoRoot(cwd);
+  // MSYS-style "/c/Users/..." from Git Bash means C:\Users\... on Windows.
+  if (process.platform === 'win32') cwd = cwd.replace(/^\/([a-zA-Z])\//, '$1:/');
+  // A cwd we cannot place must not switch the guard off: fall back to where the hook runs.
+  let root = repoRoot(cwd);
+  if (!root && cwd !== process.cwd()) { root = repoRoot(process.cwd()); if (root) cwd = process.cwd(); }
   if (!root) return { allow: true };
   const policy = loadPolicy(root);
   if (!policy) return { allow: true };
