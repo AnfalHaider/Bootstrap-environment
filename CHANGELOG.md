@@ -10,6 +10,7 @@
 - **Kit upgrades with your yes.** `bootstrap upgrade` (or `/upgrade`) refreshes the kit's own files from a newer plugin and keeps the project's policy, flow, role briefs and records. `bootstrap kit apply` (Chief of Staff only) records your yes with every kit file's sha256, and the push check accepts a kit-only change that matches it. Before, every upgrade needed a full piece with sign-offs. `.bootstrap/kit.json` now records the installed version.
 - **Helper agents:** at most 2 per session, on the cheapest model. The guard enforces both (configurable in the editor).
 - **A simpler flow editor**, opened by the Chief of Staff or with the new `/flow` command. One page instead of the canvas and tabs: an overview of you, the Chief of Staff and the family; On/Optional/Off per session; extra checks; kinds of work; helpers; and "Try a change". Dark mode and phone layout included.
+- **The skill matches 0.6.0** (one contact, on and optional sessions, branches, upgrades, helpers, new proof steps and failure conditions) and finds its kit whether it runs from the plugin or as a standalone personal skill. `scripts/install-skill.mjs` (`npm run install-skill`) installs or refreshes the personal copy with the kit it needs.
 - Briefs now say who each session reports to, how your word arrives, and its helper limit. 11 new tests (74 in total).
 
 ## 0.5.0 — 2026-11-15

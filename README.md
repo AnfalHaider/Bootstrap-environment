@@ -309,6 +309,19 @@ claude plugin install bootstrap-environment@bootstrap-environment --scope projec
 Then say: *"bootstrap this project"*. The skill asks a few questions (the project's size, which branch is
 live, which databases are real) and does the rest.
 
+**As a personal skill** (works in every project, no plugin needed):
+
+```bash
+git clone https://github.com/AnfalHaider/Bootstrap-environment ~/bootstrap-environment
+```
+
+```bash
+node ~/bootstrap-environment/scripts/install-skill.mjs
+```
+
+This copies the skill and the kit it runs into `~/.claude/skills/bootstrap-environment`, keeping a backup of
+an older `SKILL.md`. Run it again after `git pull` to update.
+
 **Any tool with a shell:**
 
 ```bash
@@ -481,6 +494,7 @@ bin/                            bootstrap, guard, prepush, mem, detect-stack, ad
 flow/defaults.json · rules.json built-in lanes, gates, conditions, words · every rule with its reason
 ui/flow-editor.html             the flow editor
 commands/                       the /flow and /upgrade commands
+scripts/install-skill.mjs       install the skill + kit as a personal skill
 roles/                          one brief per session
 templates/                      AGENTS.md, board, register, memory, lesson
 githooks/pre-push · hooks/      the push check · the Claude Code guard hook
